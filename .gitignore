@@ -4,4 +4,3 @@ node_modules/
 *.tfstate
 *.tfstate.*
 .terraform.lock.hcl
-ci-cd.yaml
