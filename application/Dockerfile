@@ -1,6 +1,6 @@
 FROM node:latest
 
-WORKDIR /usr/src/app
+WORKDIR /app
 
 COPY package.json ./
 
@@ -8,5 +8,5 @@ RUN npm install
 
 COPY . .
 
-EXPOSE 3000
-CMD ["node", "indexV2.html"]
+EXPOSE 8080
+CMD ["node", "backend_structure.js"]
