@@ -61,7 +61,8 @@ jobs:
         kubectl apply -f k8s/service.yml
 
         # Sostituisci al valore IMAGE_NAME (valore fittizzio che abbiamo inserito noi arbitrariamente) il nome dell'immagine
-        sed 's/IMAGE_NAME/${{ secrets.DOCKER_USERNAME }}/musify-platform-app:${{github.sha}}/g' k8s/deployment.yml | kubectl apply -f -
+        export IMAGE_NAME="${{ secrets.DOCKER_USERNAME }}/musify-platform-app:${{github.sha}}"
+        envsubst < k8s/deployment.yml | kubectl apply -f -
 
         kubectl rollout status deployment/musify-platform-app -n default
 
