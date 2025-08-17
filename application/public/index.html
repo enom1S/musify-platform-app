@@ -1,0 +1,1160 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Musify - La tua musica personalizzata</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+            100% { transform: translateY(0px); }
+        }
+        .floating-note {
+            animation: float 3s ease-in-out infinite;
+        }
+        .form-container {
+            backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.2);
+        }
+        .glassmorphism {
+            backdrop-filter: blur(20px);
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .song-card {
+            transition: all 0.3s ease;
+        }
+        .song-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        }
+        .playing {
+            border: 2px solid #10B981;
+            box-shadow: 0 0 20px rgba(16, 185, 129, 0.3);
+        }
+        .progress-bar {
+            transition: width 0.3s ease;
+        }
+        @keyframes pulse {
+            0% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(1.1); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+        .pulse-dot {
+            animation: pulse 2s infinite;
+        }
+        /* Styling per select con opzioni scure */
+        .mood-select option {
+            background-color: #1f2937;
+            color: #ffffff;
+        }
+        .mood-select option:hover,
+        .mood-select option:focus {
+            background-color: #374151;
+            color: #ffffff;
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900">
+    
+    <!-- Header (mostrato solo quando loggato) -->
+    <header id="mainHeader" class="glassmorphism p-4 sticky top-0 z-50 hidden">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <div class="flex items-center space-x-3">
+                <i class="fas fa-music text-white text-2xl floating-note"></i>
+                <h1 class="text-2xl font-bold text-white">Musify</h1>
+            </div>
+            <div class="flex items-center space-x-4 text-white">
+                <span id="userName" class="font-medium"></span>
+                <button id="logoutBtn" class="bg-red-500 hover:bg-red-600 px-4 py-2 rounded-lg transition-colors">
+                    <i class="fas fa-sign-out-alt mr-2"></i>Logout
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Auth Container (Login/Register) -->
+    <div id="authContainer" class="min-h-screen flex flex-col items-center justify-center p-4">
+        <div class="w-full max-w-md">
+            <div class="text-center mb-6">
+                <i class="fas fa-music text-blue-200 text-6xl floating-note"></i>
+                <h1 class="text-3xl font-bold text-white mt-4">Musify</h1>
+                <p class="text-blue-200 mt-2">Perditi nella tua nuova musica</p>
+            </div>
+
+            <!-- Registration Form -->
+            <div id="registrationForm" class="form-container rounded-xl shadow-2xl p-8 bg-white/10">
+                <h2 class="text-2xl font-bold text-white mb-6 text-center">Crea il tuo Account</h2>
+                <form id="musicForm" class="space-y-6">
+                    <div>
+                        <label for="name" class="block text-sm font-medium text-white">Nome</label>
+                        <input type="text" id="name" name="name" required 
+                               class="mt-1 block w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-300 focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+
+                    <div>
+                        <label for="email" class="block text-sm font-medium text-white">Email</label>
+                        <input type="email" id="email" name="email" required 
+                               class="mt-1 block w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-300 focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+
+                    <div>
+                        <label for="password" class="block text-sm font-medium text-white">Password</label>
+                        <input type="password" id="password" name="password" required 
+                               class="mt-1 block w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-300 focus:ring-blue-500 focus:border-blue-500">
+                        <div class="mt-2 text-xs text-gray-300">
+                            <p>La password deve contenere:</p>
+                            <ul class="list-disc list-inside text-xs mt-1 space-y-1">
+                                <li>Almeno 8 caratteri</li>
+                                <li>Una lettera maiuscola</li>
+                                <li>Una lettera minuscola</li>
+                                <li>Un numero</li>
+                                <li>Un carattere speciale (!@#$%^&* ecc.)</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-white">Generi Preferiti</label>
+                        <div class="mt-2 grid grid-cols-2 gap-2">
+                            <label class="inline-flex items-center text-white">
+                                <input type="checkbox" name="genres" value="Pop" class="rounded text-blue-600">
+                                <span class="ml-2">Pop</span>
+                            </label>
+                            <label class="inline-flex items-center text-white">
+                                <input type="checkbox" name="genres" value="Rock" class="rounded text-blue-600">
+                                <span class="ml-2">Rock</span>
+                            </label>
+                            <label class="inline-flex items-center text-white">
+                                <input type="checkbox" name="genres" value="Hip-Hop" class="rounded text-blue-600">
+                                <span class="ml-2">Hip-Hop</span>
+                            </label>
+                            <label class="inline-flex items-center text-white">
+                                <input type="checkbox" name="genres" value="Elettronica" class="rounded text-blue-600">
+                                <span class="ml-2">Elettronica</span>
+                            </label>
+                            <label class="inline-flex items-center text-white">
+                                <input type="checkbox" name="genres" value="Jazz" class="rounded text-blue-600">
+                                <span class="ml-2">Jazz</span>
+                            </label>
+                            <label class="inline-flex items-center text-white">
+                                <input type="checkbox" name="genres" value="Classica" class="rounded text-blue-600">
+                                <span class="ml-2">Classica</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label for="mood" class="block text-sm font-medium text-white">Mood Attuale</label>
+                        <select id="mood" name="mood" required
+                                class="mt-1 block w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white focus:ring-blue-500 focus:border-blue-500 mood-select">
+                            <option value="felice">😊 Felice</option>
+                            <option value="triste">😢 Triste</option>
+                            <option value="energico">⚡ Energico</option>
+                            <option value="rilassato">🌿 Rilassato</option>
+                            <option value="concentrato">🧠 Concentrato</option>
+                            <option value="nostalgico">🕰️ Nostalgico</option>
+                        </select>
+                    </div>
+
+                    <button type="submit" 
+                            class="w-full bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-bold py-3 px-4 rounded-lg transition-all duration-300 transform hover:scale-105">
+                        <i class="fas fa-user-plus mr-2"></i>Registrati
+                    </button>
+                </form>
+
+                <p class="mt-4 text-center text-blue-200">Hai già un account? <a href="#" id="showLoginForm" class="text-blue-400 hover:underline">Accedi qui</a></p>
+            </div>
+
+            <!-- Login Form -->
+            <div id="loginForm" class="form-container rounded-xl shadow-2xl p-8 bg-white/10 hidden">
+                <h2 class="text-2xl font-bold text-white mb-6 text-center">Accedi al tuo Account</h2>
+                <form id="loginMusicForm" class="space-y-6">
+                    <div>
+                        <label for="loginEmail" class="block text-sm font-medium text-white">Email</label>
+                        <input type="email" id="loginEmail" name="loginEmail" required 
+                               class="mt-1 block w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-300 focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+
+                    <div>
+                        <label for="loginPassword" class="block text-sm font-medium text-white">Password</label>
+                        <input type="password" id="loginPassword" name="loginPassword" required 
+                               class="mt-1 block w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-300 focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+
+                    <button type="submit" 
+                            class="w-full bg-gradient-to-r from-green-500 to-blue-600 hover:from-green-600 hover:to-blue-700 text-white font-bold py-3 px-4 rounded-lg transition-all duration-300 transform hover:scale-105">
+                        <i class="fas fa-sign-in-alt mr-2"></i>Accedi
+                    </button>
+                </form>
+                <p class="mt-4 text-center text-blue-200">Non hai un account? <a href="#" id="showRegisterForm" class="text-blue-400 hover:underline">Registrati qui</a></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main App (mostrato dopo login) -->
+    <div id="mainApp" class="hidden pb-32">
+        <!-- Controls -->
+        <div class="max-w-7xl mx-auto p-6">
+            <div class="glassmorphism rounded-2xl p-6 mb-8">
+                <div class="flex flex-col sm:flex-row gap-4 items-center justify-between">
+                    <div class="flex items-center space-x-4">
+                        <button id="getRecommendationsBtn" 
+                                class="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-bold py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-105">
+                            <i class="fas fa-magic mr-2"></i>Nuovi Consigli
+                        </button>
+                        <button id="changeMoodBtn"
+                                class="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-bold py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-105">
+                            <i class="fas fa-heart mr-2"></i>Cambia Mood
+                        </button>
+                    </div>
+                    <div id="userMoodDisplay" class="text-white font-medium">
+                        Mood attuale: <span id="currentMood" class="text-yellow-400"></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Loading -->
+            <div id="loadingRecommendations" class="hidden text-center py-12">
+                <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-white mb-4"></div>
+                <p class="text-white text-lg">Creando i tuoi consigli musicali...</p>
+            </div>
+
+            <!-- Recommendations -->
+            <div id="recommendationsContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Le canzoni verranno inserite qui dinamicamente -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Audio Player -->
+    <div id="audioPlayer" class="fixed bottom-0 left-0 right-0 glassmorphism p-4 hidden z-40">
+        <div class="max-w-7xl mx-auto">
+            <div class="flex items-center space-x-4">
+                <!-- Song Info -->
+                <div class="flex items-center space-x-4 min-w-0 flex-1">
+                    <div class="w-12 h-12 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center relative overflow-hidden">
+                        <img id="playerCover" src="" alt="Cover" class="w-full h-full object-cover" onerror="this.style.display='none'">
+                        <i class="fas fa-music text-white absolute inset-0 flex items-center justify-center"></i>
+                    </div>
+                    <div class="min-w-0 flex-1">
+                        <p id="playerTitle" class="text-white font-semibold truncate">Seleziona una canzone</p>
+                        <p id="playerArtist" class="text-gray-300 text-sm truncate">Artista</p>
+                    </div>
+                </div>
+
+                <!-- Controls -->
+                <div class="flex items-center space-x-4">
+                    <button id="prevBtn" class="text-white hover:text-gray-300 transition-colors">
+                        <i class="fas fa-step-backward text-xl"></i>
+                    </button>
+                    <button id="playPauseBtn" class="bg-white text-black hover:bg-gray-200 rounded-full w-12 h-12 flex items-center justify-center transition-colors">
+                        <i class="fas fa-play text-lg"></i>
+                    </button>
+                    <button id="nextBtn" class="text-white hover:text-gray-300 transition-colors">
+                        <i class="fas fa-step-forward text-xl"></i>
+                    </button>
+                </div>
+
+                <!-- Progress -->
+                <div class="flex items-center space-x-2 flex-1">
+                    <span id="currentTime" class="text-white text-sm">0:00</span>
+                    <div class="flex-1 bg-gray-600 rounded-full h-2 cursor-pointer" id="progressContainer">
+                        <div id="progressBar" class="bg-white h-2 rounded-full progress-bar" style="width: 0%"></div>
+                    </div>
+                    <span id="duration" class="text-white text-sm">0:00</span>
+                </div>
+
+                <!-- Volume -->
+                <div class="flex items-center space-x-2">
+                    <i class="fas fa-volume-up text-white"></i>
+                    <input type="range" id="volumeSlider" min="0" max="100" value="70" class="w-20">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mood Change Modal -->
+    <div id="moodModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="glassmorphism rounded-2xl p-8 m-4 max-w-md w-full">
+            <h3 class="text-2xl font-bold text-white mb-6 text-center">Cambia il tuo Mood</h3>
+            <div class="grid grid-cols-2 gap-4 mb-6">
+                <button class="mood-option bg-white/10 hover:bg-white/20 text-white p-4 rounded-lg transition-all" data-mood="felice">
+                    <div class="text-3xl mb-2">😊</div>
+                    <div>Felice</div>
+                </button>
+                <button class="mood-option bg-white/10 hover:bg-white/20 text-white p-4 rounded-lg transition-all" data-mood="triste">
+                    <div class="text-3xl mb-2">😢</div>
+                    <div>Triste</div>
+                </button>
+                <button class="mood-option bg-white/10 hover:bg-white/20 text-white p-4 rounded-lg transition-all" data-mood="energico">
+                    <div class="text-3xl mb-2">⚡</div>
+                    <div>Energico</div>
+                </button>
+                <button class="mood-option bg-white/10 hover:bg-white/20 text-white p-4 rounded-lg transition-all" data-mood="rilassato">
+                    <div class="text-3xl mb-2">🌿</div>
+                    <div>Rilassato</div>
+                </button>
+                <button class="mood-option bg-white/10 hover:bg-white/20 text-white p-4 rounded-lg transition-all" data-mood="concentrato">
+                    <div class="text-3xl mb-2">🧠</div>
+                    <div>Concentrato</div>
+                </button>
+                <button class="mood-option bg-white/10 hover:bg-white/20 text-white p-4 rounded-lg transition-all" data-mood="nostalgico">
+                    <div class="text-3xl mb-2">🕰️</div>
+                    <div>Nostalgico</div>
+                </button>
+            </div>
+            <button id="closeMoodModal" class="w-full bg-gray-600 hover:bg-gray-700 text-white py-2 px-4 rounded-lg transition-colors">
+                Annulla
+            </button>
+        </div>
+    </div>
+
+    <!-- Audio Element -->
+    <audio id="audioElement" preload="metadata"></audio>
+
+    <script>
+        // Stato globale dell'applicazione
+        let currentUser = null;
+        let currentPlaylist = [];
+        let currentSongIndex = 0;
+        let isPlaying = false;
+        let audioElement = document.getElementById('audioElement');
+
+        // Le tue funzioni esistenti (mantenute identiche)
+        function clearAuthTokens() {
+            localStorage.removeItem('accessToken');
+            localStorage.removeItem('idToken');
+            localStorage.removeItem('refreshToken');
+            localStorage.removeItem('userEmail');
+            console.log('Token di autenticazione puliti.');
+        }
+
+        async function refreshAuthTokens() {
+            const refreshToken = localStorage.getItem('refreshToken');
+            const userEmail = localStorage.getItem('userEmail');
+
+            if (!refreshToken || !userEmail) {
+                console.error('Nessun refresh token o email trovati per il refresh.');
+                clearAuthTokens();
+                return false; 
+            }
+
+            try {
+                const response = await fetch('http://localhost:8080/api/auth/refresh', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ refreshToken, email: userEmail })
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    console.log('Token rinfrescati con successo:', result);
+                    localStorage.setItem('accessToken', result.AuthenticationResult.AccessToken);
+                    localStorage.setItem('idToken', result.AuthenticationResult.IdToken);
+                    if (result.AuthenticationResult.RefreshToken) { 
+                        localStorage.setItem('refreshToken', result.AuthenticationResult.RefreshToken);
+                    }
+                    return true; 
+                } else {
+                    console.error('Errore nel refresh del token:', result.error);
+                    clearAuthTokens(); 
+                    return false; 
+                }
+            } catch (error) {
+                console.error('Errore di rete durante il refresh:', error);
+                clearAuthTokens(); 
+                return false; 
+            }
+        }
+
+        async function authenticatedFetch(url, options = {}) {
+            let accessToken = localStorage.getItem('accessToken');
+            const headers = options.headers || {};
+
+            if (accessToken) {
+                headers['Authorization'] = `Bearer ${accessToken}`;
+            }
+            options.headers = headers;
+
+            let response = await fetch(url, options);
+
+            if (response.status === 401 && !url.includes('/api/auth/refresh')) {
+                console.log('Access token scaduto o non valido. Tentativo di refresh...');
+                const refreshSuccessful = await refreshAuthTokens();
+
+                if (refreshSuccessful) {
+                    accessToken = localStorage.getItem('accessToken'); 
+                    options.headers['Authorization'] = `Bearer ${accessToken}`;
+                    response = await fetch(url, options); 
+                } else {
+                    alert('La sessione è scaduta. Effettua nuovamente il login.');
+                    clearAuthTokens();
+                    showAuthContainer();
+                    return response; 
+                }
+            }
+            return response;
+        }
+
+        // Nuove funzioni per la UI
+        function showAuthContainer() {
+            document.getElementById('authContainer').classList.remove('hidden');
+            document.getElementById('mainApp').classList.add('hidden');
+            document.getElementById('mainHeader').classList.add('hidden');
+            document.getElementById('audioPlayer').classList.add('hidden');
+        }
+
+        function showMainApp() {
+            document.getElementById('authContainer').classList.add('hidden');
+            document.getElementById('mainApp').classList.remove('hidden');
+            document.getElementById('mainHeader').classList.remove('hidden');
+        }
+
+        function formatTime(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            return `${mins}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        function getMoodEmoji(mood) {
+            const moods = {
+                'felice': '😊',
+                'triste': '😢',
+                'energico': '⚡',
+                'rilassato': '🌿',
+                'concentrato': '🧠',
+                'nostalgico': '🕰️'
+            };
+            return moods[mood] || '🎵';
+        }
+
+        // Carica profilo utente
+        async function loadUserProfile() {
+            console.log('DEBUG: loadUserProfile chiamata');
+            
+            try {
+                const response = await authenticatedFetch('http://localhost:8080/api/users/profile');
+                const data = await response.json();
+                
+                console.log('DEBUG: Response loadUserProfile:', response.status, data);
+
+                if (response.ok) {
+                    currentUser = data;
+                    console.log('DEBUG: currentUser impostato:', currentUser);
+                    
+                    document.getElementById('userName').textContent = data.nome;
+                    document.getElementById('currentMood').textContent = `${getMoodEmoji(data.mood_attuale)} ${data.mood_attuale}`;
+                    showMainApp();
+                    
+                    console.log('DEBUG: Chiamando getRecommendations...');
+                    await getRecommendations(); // Carica automaticamente i consigli
+                    console.log('DEBUG: getRecommendations completata');
+                } else {
+                    console.error('DEBUG: Errore loadUserProfile:', data);
+                    showAuthContainer();
+                }
+            } catch (error) {
+                console.error('DEBUG: Errore caricamento profilo:', error);
+                showAuthContainer();
+            }
+        }
+
+        // Funzioni per le raccomandazioni
+        async function getRecommendations() {
+            console.log('DEBUG: getRecommendations chiamata');
+            console.log('DEBUG: currentUser:', currentUser);
+            
+            if (!currentUser) {
+                console.error('DEBUG: currentUser è null o undefined');
+                return;
+            }
+
+            if (!currentUser.id) {
+                console.error('DEBUG: currentUser.id è null o undefined:', currentUser);
+                return;
+            }
+
+            console.log(`DEBUG: Caricando raccomandazioni per utente ID: ${currentUser.id}`);
+
+            document.getElementById('loadingRecommendations').classList.remove('hidden');
+            document.getElementById('recommendationsContainer').innerHTML = '';
+
+            try {
+                const url = `http://localhost:8080/api/recommendations/${currentUser.id}?limit=12`;
+                console.log('DEBUG: URL chiamata:', url);
+                
+                const response = await authenticatedFetch(url);
+                console.log('DEBUG: Response status:', response.status);
+                
+                const data = await response.json();
+                console.log('DEBUG: Response data:', data);
+
+                if (response.ok) {
+                    console.log('DEBUG: Raccomandazioni ricevute:', data.recommendations?.length || 0);
+                    const recommendationsWithCovers = await Promise.all(
+                    data.recommendations.map(async (song) => {
+                        if (song.url_immagine_copertina) {
+                            try {
+                                const coverResponse = await authenticatedFetch(`http://localhost:8080/api/songs/${song.id}/cover-url`);
+                                const coverData = await coverResponse.json();
+                                if (coverResponse.ok) {
+                                    song.coverUrl = coverData.coverUrl;
+                                }
+                            } catch (error) {
+                                console.error('Errore pre-caricamento copertina:', error);
+                            }
+                        }
+                        return song;
+                    })
+                );
+                    
+                    displayRecommendations(data.recommendations);
+                    currentPlaylist = data.recommendations;
+                } else {
+                    console.error('DEBUG: Errore nel recupero raccomandazioni:', data.error);
+                    alert('Errore nel recupero dei consigli musicali: ' + (data.error || 'Errore sconosciuto'));
+                }
+            } catch (error) {
+                console.error('DEBUG: Errore fetch raccomandazioni:', error);
+                alert('Errore di rete durante il recupero dei consigli');
+            } finally {
+                document.getElementById('loadingRecommendations').classList.add('hidden');
+            }
+        }
+
+        function displayRecommendations(songs) {
+            console.log('🎨 DEBUG: displayRecommendations chiamata con:', songs?.length || 0, 'canzoni');
+            
+            const container = document.getElementById('recommendationsContainer');
+            if (!container) {
+                console.error('🚨 DEBUG: Container recommendationsContainer non trovato!');
+                return;
+            }
+            
+            container.innerHTML = '';
+
+            if (!songs || songs.length === 0) {
+                console.log('🎵 DEBUG: Nessuna canzone da mostrare');
+                container.innerHTML = '<div class="col-span-full text-white text-center py-8">Nessuna raccomandazione disponibile al momento. Prova a cambiare mood!</div>';
+                return;
+            }
+
+            console.log('🎨 DEBUG: Creando cards per', songs.length, 'canzoni');
+
+            songs.forEach((song, index) => {
+                console.log(`🎨 DEBUG: Creando card ${index + 1}:`, song.titolo, 'by', song.artista);
+                const userRating = song.userRating || 0;
+                const popularity = typeof song.popolarita === 'number' ? song.popolarita : parseFloat(song.popolarita) || 0.0;
+                const songCard = document.createElement('div');
+                songCard.className = 'song-card glassmorphism rounded-2xl p-6 cursor-pointer';
+                songCard.innerHTML = `
+                    <div class="aspect-square bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl mb-4 flex items-center justify-center relative overflow-hidden">
+                        <img id="cover-${song.id}" 
+                            src="${song.coverUrl || ''}" 
+                            alt="Cover" 
+                            class="w-full h-full object-cover" 
+                            style="${song.coverUrl ? 'display:block' : 'display:none'}"
+                            onerror="this.style.display='none'; document.getElementById('cover-placeholder-${song.id}').style.display='flex';">
+                        <div id="cover-placeholder-${song.id}" 
+                            class="absolute inset-0 flex items-center justify-center text-white text-4xl"
+                            style="${song.coverUrl ? 'display:none' : 'display:flex'}">
+                            <i class="fas fa-music"></i>
+                        </div>
+                        <div class="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+                            <button class="bg-white text-black rounded-full w-16 h-16 flex items-center justify-center hover:scale-110 transition-transform">
+                                <i class="fas fa-play text-xl"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <h3 class="text-white font-bold text-lg mb-2 truncate">${song.titolo}</h3>
+                    <p class="text-gray-300 text-sm mb-3 truncate">${song.artista}</p>
+                    <div class="flex items-center justify-between mb-4">
+                        <span class="text-xs text-gray-400 bg-white/10 px-2 py-1 rounded">${song.genere}</span>
+                        <span class="text-xs text-gray-400">${getMoodEmoji(song.tag_mood)} ${song.tag_mood || ''}</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-1">
+                            ${[1,2,3,4,5].map(star => `
+                                <button class="star-btn text-gray-400 hover:text-yellow-400 transition-colors" data-rating="${star}" data-song-id="${song.id}">
+                                    <i class="fas fa-star text-sm ${star <= userRating ? 'text-yellow-400' : ''}"></i>
+                                </button>
+                            `).join('')}
+                        </div>
+                        <span class="popularity-score text-xs text-gray-400">♪ ${song.popolarita && typeof song.popolarita === 'number' ? song.popolarita.toFixed(1) : '0.0'}</span>
+                    </div>
+                `;
+
+                // Event listener per riproduzione
+                songCard.addEventListener('click', (e) => {
+                    if (!e.target.closest('.star-btn')) {
+                        console.log('🎵 DEBUG: Click su canzone:', song.titolo);
+                        playSong(index);
+                    }
+                });
+
+                // Event listener per rating
+                songCard.querySelectorAll('.star-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const rating = parseInt(btn.dataset.rating);
+                        const songId = parseInt(btn.dataset.songId);
+                        console.log('⭐ DEBUG: Rating canzone:', song.titolo, 'con', rating, 'stelle');
+                        rateSong(songId, rating, btn.closest('.song-card'));
+                    });
+                });
+
+                container.appendChild(songCard);
+            });
+            
+            console.log('🎨 DEBUG: Tutte le cards create e aggiunte al container');
+        }
+
+        async function loadCoverImage(songId) {
+            console.log(`Tentativo caricamento copertina per canzone ID: ${songId}`)
+            try {
+                const response = await authenticatedFetch(`http://localhost:8080/api/songs/${songId}/cover-url`);
+                const data = await response.json();
+                
+                if (response.ok && data.coverUrl) {
+                    console.log(`URL copertina ricevuto per ID ${songId}:`, data.coverUrl);
+                    const img = document.getElementById(`cover-${songId}`);
+                    const placeholder = document.getElementById(`cover-placeholder-${songId}`);
+                    
+                    console.log(`Elemento img trovato:`, img);
+                    console.log(`Elemento placeholder trovato:`, placeholder);
+                    
+                    if (img) {
+                        console.log(`Elemento img trovato per ID ${songId}, procedo con il caricamento`);
+                        const tempImg = new Image();
+                        tempImg.onload = () => {
+                            img.src = data.coverUrl;
+                            img.style.display = 'block';
+                            if (placeholder) placeholder.style.display = 'none';
+                            console.log(`Copertina caricata per canzone ID: ${songId}`);
+                        };
+                        tempImg.onerror = () => {
+                            console.error(`Errore caricamento copertina per canzone ID: ${songId}`);
+                        };
+                        tempImg.src = data.coverUrl;
+                    }
+                }
+            } catch (error) {
+                console.error(`Errore recupero URL copertina per canzone ID ${songId}:`, error);
+            }
+        }
+
+
+       async function playSong(index) {
+            if (!currentPlaylist[index]) return;
+
+            currentSongIndex = index;
+            const song = currentPlaylist[index];
+
+            try {
+                
+                const response = await authenticatedFetch(`http://localhost:8080/api/songs/${song.id}/stream-url`);
+                const data = await response.json();
+
+                if (response.ok) {
+                    console.log('URL streaming ottenuto:', data.streamUrl);
+                    
+                    audioElement.src = data.streamUrl;
+                    
+                    audioElement.addEventListener('loadstart', () => console.log('🎵 Caricamento audio iniziato'), { once: true });
+                    audioElement.addEventListener('loadeddata', () => console.log('🎵 Dati audio caricati'), { once: true });
+                    audioElement.addEventListener('canplay', () => console.log('🎵 Audio pronto per riproduzione'), { once: true });
+                    audioElement.addEventListener('error', (e) => {
+                        if (!localStorage.getItem('accessToken')) {
+                            console.log('Errore audio ignorato - utente non autenticato');
+                            return;
+                        }
+                        if (audioElement.error) {
+                            switch(audioElement.error.code) {
+                                case 1: console.error('MEDIA_ERR_ABORTED'); break;
+                                case 2: console.error('MEDIA_ERR_NETWORK'); break;
+                                case 3: console.error('MEDIA_ERR_DECODE'); break;
+                                case 4: console.error('MEDIA_ERR_SRC_NOT_SUPPORTED'); break;
+                            }
+                        }
+                        if (localStorage.getItem('accessToken')) {
+                            alert('Errore nel caricamento dell\'audio. Verifica che il file sia disponibile su S3.');
+                        }
+                    }, { once: true });
+                    
+                    audioElement.load();
+                    
+                    document.getElementById('playerTitle').textContent = song.titolo;
+                    document.getElementById('playerArtist').textContent = song.artista;
+                    
+                    const playerCover = document.getElementById('playerCover');
+                    const playerCoverIcon = playerCover.nextElementSibling; // L'icona della musica
+                    
+                    playerCover.style.display = 'none';
+                    playerCover.src = '';
+                    
+                    if (song.url_immagine_copertina) {
+                        try {
+                            const coverResponse = await authenticatedFetch(`http://localhost:8080/api/songs/${song.id}/cover-url`);
+                            const coverData = await coverResponse.json();
+                            
+                            if (coverResponse.ok && coverData.coverUrl) {
+                                playerCover.src = coverData.coverUrl;
+                                playerCover.onload = () => {
+                                    playerCover.style.display = 'block';
+                                    console.log('Copertina player caricata');
+                                };
+                                playerCover.onerror = () => {
+                                    playerCover.style.display = 'none';
+                                    console.error('Errore caricamento copertina player');
+                                };
+                            }
+                        } catch (error) {
+                            console.error('Errore recupero copertina per player:', error);
+                        }
+                    }
+                    
+                    // Mostra player
+                    document.getElementById('audioPlayer').classList.remove('hidden');
+                    
+                    await audioElement.play().catch(error => {
+                        console.error('Errore play():', error);
+                        if (error.name === 'NotAllowedError') {
+                            alert('Il browser ha bloccato la riproduzione automatica. Clicca su play per avviare.');
+                        } else {
+                            alert('Errore nella riproduzione: ' + error.message);
+                        }
+                    });
+                    
+                    isPlaying = true;
+                    updatePlayButton();
+                    
+                    document.querySelectorAll('.song-card').forEach((card, i) => {
+                        card.classList.toggle('playing', i === index);
+                    });
+                    
+                } else {
+                    console.error('Errore risposta stream URL:', data);
+                    alert('Errore nel caricamento della canzone: ' + (data.error || 'Errore sconosciuto'));
+                }
+            } catch (error) {
+                console.error('Errore generale riproduzione:', error);
+                alert('Errore nella riproduzione della canzone');
+            }
+        }
+            
+        function updatePlayButton() {
+            const btn = document.getElementById('playPauseBtn');
+            const icon = btn.querySelector('i');
+            icon.className = isPlaying ? 'fas fa-pause text-lg' : 'fas fa-play text-lg';
+        }
+
+        function cleanupAudioPlayer() {
+            if (audioElement) {
+                audioElement.pause();
+                audioElement.removeAttribute('src');
+                audioElement.load();
+            }
+            
+            document.getElementById('playerTitle').textContent = 'Seleziona una canzone';
+            document.getElementById('playerArtist').textContent = 'Artista';
+            document.getElementById('currentTime').textContent = '0:00';
+            document.getElementById('duration').textContent = '0:00';
+            document.getElementById('progressBar').style.width = '0%';
+            
+            const playerCover = document.getElementById('playerCover');
+            if (playerCover) {
+                playerCover.src = '';
+                playerCover.style.display = 'none';
+            }
+            
+            isPlaying = false;
+            updatePlayButton();
+        }
+
+        async function rateSong(songId, rating, cardElement) {
+            try {
+                const response = await authenticatedFetch(`http://localhost:8080/api/songs/${songId}/rate`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ rating })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log('📊 Risposta rating ricevuta:', data);
+                    const stars = cardElement.querySelectorAll('.star-btn');
+                    stars.forEach((star, index) => {
+                        const starIcon = star.querySelector('i');
+                        if (index < rating) {
+                            starIcon.className = 'fas fa-star text-sm text-yellow-400';
+                        } else {
+                            starIcon.className = 'fas fa-star text-sm text-gray-400';
+                        }
+                    });
+
+                    if (data.newPopularity !== undefined && data.newPopularity !== null) {
+                        const popularityValue = Number(data.newPopularity); 
+                        if (!isNaN(popularityValue)) {
+                            const popularitySpan = cardElement.querySelector('.popularity-score');
+                            if (popularitySpan) {
+                                popularitySpan.textContent = `♪ ${popularityValue.toFixed(1)}`;
+                            }
+                            
+                            const song = currentPlaylist.find(s => s.id === songId);
+                            if (song) {
+                                song.popolarita = popularityValue;
+                            }
+                        }
+                    }
+                    
+                    const song = currentPlaylist.find(s => s.id === songId);
+                    if (song) {
+                        song.userRating = rating;
+                    }
+                    
+                    cardElement.style.transform = 'scale(1.05)';
+                    setTimeout(() => {
+                        cardElement.style.transform = '';
+                    }, 200);
+                } else {
+                    alert('Errore nel salvare la valutazione');
+                }
+            } catch (error) {
+                console.error('Errore rating:', error);
+                alert('Errore nella valutazione della canzone');
+            }
+        }
+
+        // Cambia mood utente
+        async function changeMood(newMood) {
+            if (!currentUser) return;
+
+            try {
+                const response = await authenticatedFetch(`http://localhost:8080/api/users/${currentUser.id}/mood`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ mood: newMood })
+                });
+
+                if (response.ok) {
+                    currentUser.mood_attuale = newMood;
+                    document.getElementById('currentMood').textContent = `${getMoodEmoji(newMood)} ${newMood}`;
+                    document.getElementById('moodModal').classList.add('hidden');
+                    
+                    // Ricarica consigli con nuovo mood
+                    getRecommendations();
+                } else {
+                    alert('Errore nell\'aggiornamento del mood');
+                }
+            } catch (error) {
+                console.error('Errore cambio mood:', error);
+                alert('Errore nella modifica del mood');
+            }
+        }
+
+        // Event Listeners
+        document.addEventListener('DOMContentLoaded', function() {
+            // Check se utente già loggato
+            const accessToken = localStorage.getItem('accessToken');
+            if (accessToken) {
+                loadUserProfile();
+            } else {
+                showAuthContainer();
+            }
+
+            // Form toggle (mantenuti identici)
+            document.getElementById('showLoginForm').addEventListener('click', function(e) {
+                e.preventDefault();
+                document.getElementById('registrationForm').classList.add('hidden');
+                document.getElementById('loginForm').classList.remove('hidden');
+            });
+
+            document.getElementById('showRegisterForm').addEventListener('click', function(e) {
+                e.preventDefault();
+                document.getElementById('loginForm').classList.add('hidden');
+                document.getElementById('registrationForm').classList.remove('hidden');
+            });
+
+            // Registration form (con validazione password migliorata)
+            document.getElementById('musicForm').addEventListener('submit', async function(event) {
+                event.preventDefault();
+
+                const formData = {
+                    name: document.getElementById('name').value,
+                    email: document.getElementById('email').value,
+                    password: document.getElementById('password').value,
+                    genres: Array.from(document.querySelectorAll('input[name="genres"]:checked')).map(el => el.value),
+                    mood: document.getElementById('mood').value
+                };
+
+                // Validazione generi
+                if (formData.genres.length === 0) {
+                    alert('Seleziona almeno un genere musicale preferito.');
+                    return;
+                }
+
+                // Validazione password
+                const passwordErrors = validatePassword(formData.password);
+                if (passwordErrors.length > 0) {
+                    alert('La password non è valida:\n\n' + passwordErrors.join('\n'));
+                    return;
+                }
+
+                console.log('Form di registrazione inviato:', formData);
+
+                try {
+                    const response = await fetch('http://localhost:8080/api/auth/register', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(formData)
+                    });
+
+                    const data = await response.json();
+
+                    if (response.ok) {
+                        alert('Registrazione completata con successo! Ora puoi accedere.');
+                        console.log('Registrazione Successo:', data);
+                        document.getElementById('registrationForm').classList.add('hidden');
+                        document.getElementById('loginForm').classList.remove('hidden');
+                    } else {
+                        // Gestione errori specifici
+                        let errorMessage = 'Errore durante la registrazione:\n\n';
+                        if (data.error) {
+                            if (data.error.includes('already exists') || data.error.includes('già registrata')) {
+                                errorMessage += '• Email già registrata. Prova a fare login o usa un\'altra email.';
+                            } else if (data.error.includes('password') || data.error.includes('Password')) {
+                                errorMessage += '• ' + data.error;
+                            } else {
+                                errorMessage += '• ' + data.error;
+                            }
+                        } else {
+                            errorMessage += '• Errore sconosciuto. Riprova più tardi.';
+                        }
+                        
+                        alert(errorMessage);
+                        console.error('Registrazione Errore:', data);
+                    }
+                } catch (error) {
+                    console.error('Errore di rete o server durante la registrazione:', error);
+                    alert('Impossibile connettersi al server per la registrazione.\n\nAssicurati che il backend sia in esecuzione e riprova.');
+                }
+            });
+
+            // Funzione di validazione password
+            function validatePassword(password) {
+                const errors = [];
+                
+                if (password.length < 8) {
+                    errors.push('• Deve essere lunga almeno 8 caratteri');
+                }
+                
+                if (!/[A-Z]/.test(password)) {
+                    errors.push('• Deve contenere almeno una lettera maiuscola');
+                }
+                
+                if (!/[a-z]/.test(password)) {
+                    errors.push('• Deve contenere almeno una lettera minuscola');
+                }
+                
+                if (!/[0-9]/.test(password)) {
+                    errors.push('• Deve contenere almeno un numero');
+                }
+                
+                if (!/[^A-Za-z0-9]/.test(password)) {
+                    errors.push('• Deve contenere almeno un carattere speciale (!@#$%^&* ecc.)');
+                }
+                
+                return errors;
+            }
+
+            // Login form (con gestione errori migliorata)
+            document.getElementById('loginMusicForm').addEventListener('submit', async function(e) {
+                e.preventDefault();
+
+                const loginFormData = {
+                    email: document.getElementById('loginEmail').value,
+                    password: document.getElementById('loginPassword').value
+                };
+
+                // Validazione base
+                if (!loginFormData.email || !loginFormData.password) {
+                    alert('Inserisci email e password per accedere.');
+                    return;
+                }
+
+                console.log('Form di login inviato:', { email: loginFormData.email, password: '[HIDDEN]' });
+
+                // Disabilita il pulsante durante il login
+                const submitBtn = e.target.querySelector('button[type="submit"]');
+                const originalText = submitBtn.innerHTML;
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Accesso in corso...';
+
+                try {
+                    const response = await fetch('http://localhost:8080/api/auth/login', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(loginFormData)
+                    });
+
+                    const result = await response.json();
+
+                    if (response.ok) {
+                        console.log('Login Successo:', result);
+                        localStorage.setItem('accessToken', result.accessToken); 
+                        localStorage.setItem('idToken', result.idToken);        
+                        localStorage.setItem('refreshToken', result.refreshToken); 
+                        localStorage.setItem('userEmail', loginFormData.email);
+
+                        // Carica il profilo utente e mostra l'app principale
+                        await loadUserProfile();
+                    } else {
+                        // Gestione errori specifici
+                        let errorMessage = '';
+                        
+                        if (response.status === 401) {
+                            errorMessage = result.error || 'Credenziali non valide. Controlla email e password.';
+                        } else if (response.status === 429) {
+                            errorMessage = 'Troppi tentativi di login. Attendi qualche minuto prima di riprovare.';
+                        } else if (response.status === 400) {
+                            errorMessage = 'Dati di login non validi. ' + (result.error || '');
+                        } else {
+                            errorMessage = result.error || 'Errore durante l\'accesso. Riprova più tardi.';
+                        }
+                        
+                        alert('❌ Errore di Login\n\n' + errorMessage);
+                        console.error('Login Errore:', result);
+                        
+                        // Focus sul campo email per facilitare la correzione
+                        document.getElementById('loginEmail').focus();
+                    }
+                } catch (error) {
+                    console.error('Errore di rete o server durante il login:', error);
+                    alert('❌ Errore di Connessione\n\nImpossibile connettersi al server.\n\nAssicurati che:\n• Il backend sia in esecuzione\n• La connessione internet funzioni\n• Il server sia raggiungibile');
+                } finally {
+                    // Riabilita il pulsante
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = originalText;
+                }
+            });
+
+            // Nuovi event listeners per l'app musicale
+            document.getElementById('getRecommendationsBtn').addEventListener('click', getRecommendations);
+
+            document.getElementById('changeMoodBtn').addEventListener('click', function() {
+                document.getElementById('moodModal').classList.remove('hidden');
+            });
+
+            document.getElementById('closeMoodModal').addEventListener('click', function() {
+                document.getElementById('moodModal').classList.add('hidden');
+            });
+
+            // Mood selection
+            document.querySelectorAll('.mood-option').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const mood = this.dataset.mood;
+                    changeMood(mood);
+                });
+            });
+
+            // Audio player controls
+            document.getElementById('playPauseBtn').addEventListener('click', function() {
+                if (isPlaying) {
+                    audioElement.pause();
+                    isPlaying = false;
+                } else {
+                    audioElement.play();
+                    isPlaying = true;
+                }
+                updatePlayButton();
+            });
+
+            document.getElementById('prevBtn').addEventListener('click', function() {
+                if (currentSongIndex > 0) {
+                    playSong(currentSongIndex - 1);
+                }
+            });
+
+            document.getElementById('nextBtn').addEventListener('click', function() {
+                if (currentSongIndex < currentPlaylist.length - 1) {
+                    playSong(currentSongIndex + 1);
+                }
+            });
+
+            // Progress bar
+            document.getElementById('progressContainer').addEventListener('click', function(e) {
+                const rect = this.getBoundingClientRect();
+                const percent = (e.clientX - rect.left) / rect.width;
+                const newTime = percent * audioElement.duration;
+                audioElement.currentTime = newTime;
+            });
+
+            // Volume control
+            document.getElementById('volumeSlider').addEventListener('input', function() {
+                audioElement.volume = this.value / 100;
+            });
+
+            // Audio events
+            audioElement.addEventListener('timeupdate', function() {
+                if (audioElement.duration) {
+                    const percent = (audioElement.currentTime / audioElement.duration) * 100;
+                    document.getElementById('progressBar').style.width = percent + '%';
+                    document.getElementById('currentTime').textContent = formatTime(audioElement.currentTime);
+                    document.getElementById('duration').textContent = formatTime(audioElement.duration);
+                }
+            });
+
+            audioElement.addEventListener('ended', function() {
+                isPlaying = false;
+                updatePlayButton();
+                
+                // Auto-play next song
+                if (currentSongIndex < currentPlaylist.length - 1) {
+                    playSong(currentSongIndex + 1);
+                }
+            });
+
+            audioElement.addEventListener('play', function() {
+                isPlaying = true;
+                updatePlayButton();
+            });
+
+            audioElement.addEventListener('pause', function() {
+                isPlaying = false;
+                updatePlayButton();
+            });
+
+            document.getElementById('logoutBtn').addEventListener('click', function() {
+                cleanupAudioPlayer();
+                
+                /*if (audioElement) {
+                    audioElement.pause();
+                    audioElement.src = '';
+                    audioElement.load(); 
+                }*/
+                
+                isPlaying = false;
+                currentSongIndex = 0;
+                currentPlaylist = [];
+                document.getElementById('audioPlayer').classList.add('hidden');
+                
+                clearAuthTokens(); 
+                currentUser = null;
+                
+                showAuthContainer();
+            });
+        });
+    </script>
+</body>
+</html>
