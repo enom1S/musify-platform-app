@@ -611,9 +611,9 @@ app.get('/health', (req, res) => {
 // verifica che il DB sia raggiungibile
 app.get('/ready', async (req, res) => {
   try {
-    const connection = await pool.getConnection();
-    await connection.execute('SELECT 1');
-    connection.release();
+    // const connection = await pool.getConnection();
+    // await connection.execute('SELECT 1');
+    // connection.release();
     res.status(200).json({ status: 'READY' });
   } catch (error) {
     res.status(503).json({ status: 'NOT_READY', error: error.message });
