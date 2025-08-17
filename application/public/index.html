@@ -554,19 +554,17 @@
                 const popularity = typeof song.popolarita === 'number' ? song.popolarita : parseFloat(song.popolarita) || 0.0;
                 const songCard = document.createElement('div');
                 songCard.className = 'song-card glassmorphism rounded-2xl p-6 cursor-pointer';
+                const coverDisplay = song.coverUrl ? 
+                    `<img src="${song.coverUrl}" alt="Cover" class="w-full h-full object-cover" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                    <div class="absolute inset-0 flex items-center justify-center text-white text-4xl" style="display:none">
+                        <i class="fas fa-music"></i>
+                    </div>` :
+                    `<div class="absolute inset-0 flex items-center justify-center text-white text-4xl">
+                        <i class="fas fa-music"></i>
+                    </div>`;
                 songCard.innerHTML = `
                     <div class="aspect-square bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl mb-4 flex items-center justify-center relative overflow-hidden">
-                        <img id="cover-${song.id}" 
-                            src="${song.coverUrl || ''}" 
-                            alt="Cover" 
-                            class="w-full h-full object-cover" 
-                            style="${song.coverUrl ? 'display:block' : 'display:none'}"
-                            onerror="this.style.display='none'; document.getElementById('cover-placeholder-${song.id}').style.display='flex';">
-                        <div id="cover-placeholder-${song.id}" 
-                            class="absolute inset-0 flex items-center justify-center text-white text-4xl"
-                            style="${song.coverUrl ? 'display:none' : 'display:flex'}">
-                            <i class="fas fa-music"></i>
-                        </div>
+                        ${coverDisplay}
                         <div class="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
                             <button class="bg-white text-black rounded-full w-16 h-16 flex items-center justify-center hover:scale-110 transition-transform">
                                 <i class="fas fa-play text-xl"></i>
@@ -587,7 +585,7 @@
                                 </button>
                             `).join('')}
                         </div>
-                        <span class="popularity-score text-xs text-gray-400">♪ ${song.popolarita && typeof song.popolarita === 'number' ? song.popolarita.toFixed(1) : '0.0'}</span>
+                        <span class="popularity-score text-xs text-gray-400">♪ ${popularity.toFixed(1)}</span>
                     </div>
                 `;
 
@@ -652,12 +650,20 @@
 
 
        async function playSong(index) {
+            
             if (!currentPlaylist[index]) return;
 
             currentSongIndex = index;
             const song = currentPlaylist[index];
 
             try {
+
+                if (!song.streamUrl) {
+                    throw new Error('URL stream non disponibile per questa canzone');
+                }
+
+                const streamUrl = song.streamUrl;
+                audioElement.src = streamUrl;
                 
                 const response = await authenticatedFetch(`/api/songs/${song.id}/stream-url`);
                 const data = await response.json();
@@ -699,7 +705,16 @@
                     playerCover.style.display = 'none';
                     playerCover.src = '';
                     
-                    if (song.url_immagine_copertina) {
+                    if (song.coverUrl) {
+                        playerCover.src = song.coverUrl;
+                        playerCover.onload = () => {
+                            playerCover.style.display = 'block';
+                            console.log('Copertina caricata da URL pre-esistente');
+                        };
+                        playerCover.onerror = () => {
+                            console.error('Errore caricamento copertina da URL pre-esistente');
+                        };
+                    } else if (song.url_immagine_copertina) {
                         try {
                             const coverResponse = await authenticatedFetch(`/api/songs/${song.id}/cover-url`);
                             const coverData = await coverResponse.json();
@@ -708,15 +723,11 @@
                                 playerCover.src = coverData.coverUrl;
                                 playerCover.onload = () => {
                                     playerCover.style.display = 'block';
-                                    console.log('Copertina player caricata');
-                                };
-                                playerCover.onerror = () => {
-                                    playerCover.style.display = 'none';
-                                    console.error('Errore caricamento copertina player');
+                                    console.log('Copertina caricata da API');
                                 };
                             }
                         } catch (error) {
-                            console.error('Errore recupero copertina per player:', error);
+                            console.error('Errore recupero copertina tramite API:', error);
                         }
                     }
                     

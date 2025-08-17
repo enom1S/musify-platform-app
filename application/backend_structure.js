@@ -611,9 +611,9 @@ app.get('/health', (req, res) => {
 // verifica che il DB sia raggiungibile
 app.get('/ready', async (req, res) => {
   try {
-    // const connection = await pool.getConnection();
-    // await connection.execute('SELECT 1');
-    // connection.release();
+    const connection = await pool.getConnection();
+    await connection.execute('SELECT 1');
+    connection.release();
     res.status(200).json({ status: 'READY' });
   } catch (error) {
     res.status(503).json({ status: 'NOT_READY', error: error.message });
@@ -1360,8 +1360,63 @@ app.get('/api/recommendations/:userId', authenticateToken, async (req, res) => {
     const shuffledRecommendations = finalRecommendations
       .sort(() => Math.random() - 0.5)
       .slice(0, limit);
+
+    const recommendationsWithUrls = await Promise.all(
+      shuffledRecommendations.map(async (song) => {
+        try {
+          let audioS3Key;
+          if (song.url_s3 && song.url_s3.includes('.amazonaws.com/')) {
+            audioS3Key = song.url_s3.split('.amazonaws.com/')[1];
+          } else if (song.url_s3) {
+            audioS3Key = song.url_s3.startsWith('/') ? song.url_s3.substring(1) : song.url_s3;
+          }
+          
+          console.log(`DEBUG: Generando stream URL per canzone ${song.id}, S3 Key: ${audioS3Key}`);
+          
+          if (audioS3Key) {
+            const audioParams = {
+              Bucket: process.env.S3_BUCKET_NAME,
+              Key: audioS3Key,
+              Expires: 3600, // 1 ora
+              ResponseContentType: 'audio/mpeg',
+              ResponseContentDisposition: `inline; filename="${song.titolo} - ${song.artista}.mp3"`
+            };
+            
+            song.streamUrl = s3.getSignedUrl('getObject', audioParams);
+            console.log(`DEBUG: Stream URL generato per ${song.titolo}: ${song.streamUrl.substring(0, 100)}...`);
+          }
+          
+          if (song.url_immagine_copertina) {
+            let coverS3Key;
+            if (song.url_immagine_copertina.includes('.amazonaws.com/')) {
+              coverS3Key = song.url_immagine_copertina.split('.amazonaws.com/')[1];
+            } else {
+              coverS3Key = song.url_immagine_copertina.startsWith('/') ? song.url_immagine_copertina.substring(1) : song.url_immagine_copertina;
+            }
+            
+            console.log(`DEBUG: Generando cover URL per canzone ${song.id}, S3 Key: ${coverS3Key}`);
+            
+            const coverParams = {
+              Bucket: process.env.S3_BUCKET_NAME,
+              Key: coverS3Key,
+              Expires: 3600,
+              ResponseContentDisposition: `inline; filename="${song.titolo}-cover.jpg"`
+            };
+            
+            song.coverUrl = s3.getSignedUrl('getObject', coverParams);
+            console.log(`DEBUG: Cover URL generato per ${song.titolo}: ${song.coverUrl.substring(0, 100)}...`);
+          }
+          
+        } catch (error) {
+          console.error(`Errore generazione URL per canzone ${song.id}:`, error);
+        }
+        
+        return song;
+      })
+    );
     
-    console.log('DEBUG: Raccomandazioni finali:', shuffledRecommendations.length);
+    console.log('DEBUG: Raccomandazioni con URL generate:', recommendationsWithUrls.length);
+    
     
     if (typeof saveToHistory === 'function' && shuffledRecommendations.length > 0) {
         await saveToHistory(parseInt(userId), shuffledRecommendations, mood);
