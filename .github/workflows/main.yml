@@ -24,3 +24,32 @@ jobs:
 
     - name: Push Docker image to Docker Hub
       run: docker push ${{ secrets.DOCKER_USERNAME }}/musify-platform-app:latest
+
+      # CD - Deploy
+
+    - id: "get-credentials"
+      uses: "google-github-actions/get-gke-credentials@v2"
+      with:
+        cluster_name: "musify-platform-gke"
+        location: "europe-west12"
+
+    - name: Configurazione cluster su KubeConfig
+      run: |
+        export PRIVATE_IP_GKE_CLUSTER=$(gcloud container clusters describe musify-platform-gke \
+          --project "musify-platform" \
+          --region europe-west12 \
+          --format="get(privateClusterConfig.privateEndpoint)")
+
+        kubectl config set-cluster musify-platform-gke --server=https://127.0.0.1:8443
+        kubectl config set-cluster musify-platform-gke --tls-server-name=$PRIVATE_IP_GKE_CLUSTER
+
+        gcloud compute ssh --zone "europe-west12" "gke-bastion-host" --tunnel-through-iap --project "musify-platform" -- -fNL 8443:$PRIVATE_IP_GKE_CLUSTER:443
+
+    - name: Deploy
+      run: |
+        kubectl apply -f k8s/
+          
+        kubectl rollout status deployment/musify-platform-app -n default --timeout=300s
+          
+        kubectl get pods -l app=musify-platform-app
+        kubectl get svc musify-platform-service
