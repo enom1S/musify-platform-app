@@ -32,6 +32,7 @@ jobs:
       with:
         cluster_name: "musify-platform-gke"
         location: "europe-west12"
+        project_id: "musify-platform"
 
     - name: Configurazione cluster su KubeConfig
       run: |
