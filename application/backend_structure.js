@@ -1363,6 +1363,11 @@ app.get('/api/recommendations/:userId', authenticateToken, async (req, res) => {
 
     const recommendationsWithUrls = await Promise.all(
       shuffledRecommendations.map(async (song) => {
+        console.log(`\n=== DEBUG CANZONE ${song.id}: ${song.titolo} ===`);
+        console.log(`url_s3 raw dal DB: "${song.url_s3}"`);
+        console.log(`url_immagine_copertina raw dal DB: "${song.url_immagine_copertina}"`);
+        console.log(`S3_BUCKET_NAME: "${process.env.S3_BUCKET_NAME}"`);
+        console.log(`AWS_REGION: "${process.env.AWS_REGION}"`);
         try {
           let audioS3Key;
           if (song.url_s3 && song.url_s3.includes('.amazonaws.com/')) {
