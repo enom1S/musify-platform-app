@@ -1,0 +1,28 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: musify-env-config
+data:
+  PROJECT: "musify-platform"
+
+  AWS_REGION: "us-east-1"  
+  PORT: "8080"
+  
+  COGNITO_REGION: "us-east-1"  
+  COGNITO_USER_POOL_ID: "us-east-1_xLIZ90F8M"
+  COGNITO_CLIENT_ID: "7qedo2dqr51219jhdppsh7819m"
+
+  DB_HOST: "musify-database.czghasx8xylc.us-east-1.rds.amazonaws.com"
+  DB_NAME: "musify"
+  DB_USERNAME: "admin"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: musify-secrets
+type: Opaque
+stringData:
+  DB_PASSWORD: 0yFdl?og(IPKA1Zp
+  JWT_SECRET: cd1b07fc6ace611d6705e0a69dff172268a37ebaf24d1a072da405f237089e00e5ed91e9b1eca1713ba8fdee4a2df0d0c8f338578de3f04b6c87242040cf13c0
+  COGNITO_CLIENT_SECRET: 1l3gqf9iu4kgbjmbta7k0ghsvs5a5ar2alar9htr5pstf2fgbn8o 
+  S3_BUCKET_NAME: musify-platform-bucket-084e8ebc

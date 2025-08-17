@@ -671,10 +671,21 @@
                     audioElement.addEventListener('loadeddata', () => console.log('🎵 Dati audio caricati'), { once: true });
                     audioElement.addEventListener('canplay', () => console.log('🎵 Audio pronto per riproduzione'), { once: true });
                     audioElement.addEventListener('error', (e) => {
-                        console.error('Errore audio:', e);
-                        console.error('Audio error code:', audioElement.error?.code);
-                        console.error('Audio error message:', audioElement.error?.message);
-                        alert('Errore nel caricamento dell\'audio. Verifica che il file sia disponibile su S3.');
+                        if (!localStorage.getItem('accessToken')) {
+                            console.log('Errore audio ignorato - utente non autenticato');
+                            return;
+                        }
+                        if (audioElement.error) {
+                            switch(audioElement.error.code) {
+                                case 1: console.error('MEDIA_ERR_ABORTED'); break;
+                                case 2: console.error('MEDIA_ERR_NETWORK'); break;
+                                case 3: console.error('MEDIA_ERR_DECODE'); break;
+                                case 4: console.error('MEDIA_ERR_SRC_NOT_SUPPORTED'); break;
+                            }
+                        }
+                        if (localStorage.getItem('accessToken')) {
+                            alert('Errore nel caricamento dell\'audio. Verifica che il file sia disponibile su S3.');
+                        }
                     }, { once: true });
                     
                     audioElement.load();
@@ -742,6 +753,29 @@
             const btn = document.getElementById('playPauseBtn');
             const icon = btn.querySelector('i');
             icon.className = isPlaying ? 'fas fa-pause text-lg' : 'fas fa-play text-lg';
+        }
+
+        function cleanupAudioPlayer() {
+            if (audioElement) {
+                audioElement.pause();
+                audioElement.removeAttribute('src');
+                audioElement.load();
+            }
+            
+            document.getElementById('playerTitle').textContent = 'Seleziona una canzone';
+            document.getElementById('playerArtist').textContent = 'Artista';
+            document.getElementById('currentTime').textContent = '0:00';
+            document.getElementById('duration').textContent = '0:00';
+            document.getElementById('progressBar').style.width = '0%';
+            
+            const playerCover = document.getElementById('playerCover');
+            if (playerCover) {
+                playerCover.src = '';
+                playerCover.style.display = 'none';
+            }
+            
+            isPlaying = false;
+            updatePlayButton();
         }
 
         async function rateSong(songId, rating, cardElement) {
@@ -1102,12 +1136,13 @@
             });
 
             document.getElementById('logoutBtn').addEventListener('click', function() {
+                cleanupAudioPlayer();
                 
-                if (audioElement) {
+                /*if (audioElement) {
                     audioElement.pause();
                     audioElement.src = '';
                     audioElement.load(); 
-                }
+                }*/
                 
                 isPlaying = false;
                 currentSongIndex = 0;
