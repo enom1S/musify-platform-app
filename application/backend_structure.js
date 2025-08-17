@@ -32,8 +32,26 @@ const s3 = new AWS.S3({
   signatureVersion: 's3v4'
 });
 
-console.log('Nome bucket:', process.env.S3_BUCKET_NAME);
+//console.log('Nome bucket:', process.env.S3_BUCKET_NAME);
 console.log('Regione bucket:', process.env.AWS_REGION);
+
+try {
+  const testParams = {
+    Bucket: process.env.S3_BUCKET_NAME,
+    Key: 'test-key-for-debug',
+    Expires: 60
+  };
+  const testUrl = s3.getSignedUrl('getObject', testParams);
+  console.log(`✅ Test S3 URL: ${testUrl.substring(0, 150)}...`);
+  
+  if (testUrl.includes(process.env.S3_BUCKET_NAME)) {
+    console.log('✅ S3 configurazione sembra corretta - bucket name presente nell\'URL');
+  } else {
+    console.error('❌ S3 configurazione problematica - bucket name mancante nell\'URL');
+  }
+} catch (error) {
+  console.error('❌ Test S3 configurazione fallito:', error.message);
+}
 
 // Configurazione Database (MySQL)
 const dbConfig = {
