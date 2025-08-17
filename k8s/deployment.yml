@@ -5,7 +5,7 @@ metadata:
   labels:
     app: musify-platform-app
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: musify-platform-app
@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
       - name: musify-backend
-        image: crastenomis/musify-platform-app:latest
+        image: IMAGE_NAME
         ports:
         - containerPort: 8080
         env:

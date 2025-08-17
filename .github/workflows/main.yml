@@ -20,10 +20,10 @@ jobs:
         password: ${{ secrets.DOCKER_PASSWORD }}
 
     - name: Build Docker image
-      run: docker build -t ${{ secrets.DOCKER_USERNAME }}/musify-platform-app:latest ./application
+      run: docker build -t ${{ secrets.DOCKER_USERNAME }}/musify-platform-app:${{github.sha}} ./application
 
     - name: Push Docker image to Docker Hub
-      run: docker push ${{ secrets.DOCKER_USERNAME }}/musify-platform-app:latest
+      run: docker push ${{ secrets.DOCKER_USERNAME }}/musify-platform-app:${{github.sha}}
 
       # CD - Deploy
 
@@ -47,9 +47,15 @@ jobs:
 
     - name: Deploy
       run: |
-        kubectl apply -f k8s/
-          
-        kubectl rollout status deployment/musify-platform-app -n default --timeout=300s
+        kubectl apply -f k8s/configmap.yml
+        kubectl apply -f k8s/service.yml
+
+        # Sostituisci al valore IMAGE_NAME (valore fittizzio che abbiamo inserito noi arbitrariamente) il nome dell'immagine
+        sed 's/IMAGE_NAME/${{ secrets.DOCKER_USERNAME }}/musify-platform-app:${{github.sha}}/g' k8s/deployment.yml | kubectl apply -f -
+
+        kubectl rollout status deployment/musify-platform-app -n default
+
+        kubectl apply -f k8s/httproute.yml
           
         kubectl get pods -l app=musify-platform-app
         kubectl get svc musify-platform-service
