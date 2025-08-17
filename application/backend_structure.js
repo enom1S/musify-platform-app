@@ -29,7 +29,10 @@ const { time } = require('console');
 
 const s3 = new AWS.S3({
   region: process.env.AWS_REGION,    // configurato con regione AWS delle variabili d'ambiente
-  signatureVersion: 's3v4'
+  signatureVersion: 's3v4',
+  endpoint: `https://s3.${process.env.AWS_REGION}.amazonaws.com`,
+  s3ForcePathStyle: false,
+  s3BucketEndpoint: false
 });
 
 //console.log('Nome bucket:', process.env.S3_BUCKET_NAME);
@@ -51,6 +54,62 @@ try {
   }
 } catch (error) {
   console.error('❌ Test S3 configurazione fallito:', error.message);
+}
+
+console.log('🧪 Testing S3 configuration...');
+try {
+  const testParams = {
+    Bucket: process.env.S3_BUCKET_NAME,
+    Key: 'test-key-for-debug',
+    Expires: 60
+  };
+  
+  const testUrl = s3.getSignedUrl('getObject', testParams);
+  console.log(`Test URL generato: ${testUrl}`);
+  
+  // Verifica componenti dell'URL
+  if (testUrl.includes(process.env.S3_BUCKET_NAME)) {
+    console.log('✅ Bucket name PRESENTE nell\'URL');
+  } else {
+    console.error('❌ Bucket name MANCANTE nell\'URL');
+  }
+  
+  if (testUrl.includes(process.env.AWS_REGION)) {
+    console.log('✅ Region PRESENTE nell\'URL');
+  } else {
+    console.error('❌ Region MANCANTE nell\'URL');
+  }
+  
+  // Mostra il formato dell'URL
+  if (testUrl.includes('s3.amazonaws.com')) {
+    console.log('📍 Formato URL: Global endpoint (potrebbe essere problematico)');
+  } else if (testUrl.includes(`s3.${process.env.AWS_REGION}.amazonaws.com`)) {
+    console.log('📍 Formato URL: Regional endpoint (corretto)');
+  } else if (testUrl.includes(`${process.env.S3_BUCKET_NAME}.s3`)) {
+    console.log('📍 Formato URL: Virtual hosted-style (corretto)');
+  }
+  
+} catch (error) {
+  console.error('❌ Errore test S3:', error.message);
+  console.error('Stack:', error.stack);
+}
+
+// Test con credenziali
+console.log('🔐 Verificando credenziali AWS...');
+try {
+  const sts = new AWS.STS({ region: process.env.AWS_REGION });
+  sts.getCallerIdentity({}, (err, data) => {
+    if (err) {
+      console.error('❌ Credenziali AWS non valide:', err.message);
+    } else {
+      console.log('✅ Credenziali AWS valide:', {
+        Account: data.Account,
+        Arn: data.Arn
+      });
+    }
+  });
+} catch (error) {
+  console.error('❌ Errore verifica credenziali:', error.message);
 }
 
 // Configurazione Database (MySQL)
