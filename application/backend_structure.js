@@ -130,9 +130,7 @@ async function getCognitoPems() {
 // ============== AUTHENTICATION ROUTES ==============
 
 app.get('/', async (req, res) => {
-  return res.json({
-    ok: 1
-  }); 
+  return res.render('indexV2.html')
 })
 
 // Login utente con Cognito
