@@ -7,6 +7,7 @@ const AWS = require('aws-sdk');   // integra servizi AWS
 const jwt = require('jsonwebtoken');    // crea e verifica token JWT per autenticazione
 const jwkToPem = require('jwk-to-pem');   // convertire le chiavi JWK (che Cognito fornisce) nel formato PEM necessario per la verifica
 const axios = require('axios');   // scaricare le chiavi pubbliche di Cognito
+const path = require('path'); // Modulo 'path' per gestire i percorsi dei file
 
 const app = express();    // crea app Express
 const port = process.env.PORT || 8080;    // imposta la porta
@@ -16,6 +17,8 @@ let pems;   // cache per chiavi pubbliche di Cognito
 // Middleware
 app.use(cors());    // abilita CORS per tutte le route
 app.use(express.json());    // abilita parsing automatico del JSON nelle richieste
+
+app.use(express.static(path.join(__dirname, 'public')));
 
 // Configurazione AWS
 const cognito = new AWS.CognitoIdentityServiceProvider({
@@ -128,10 +131,6 @@ async function getCognitoPems() {
 }
 
 // ============== AUTHENTICATION ROUTES ==============
-
-app.get('/', async (req, res) => {
-  return res.render('indexV2.html')
-})
 
 // Login utente con Cognito
 app.post('/api/auth/login', async (req, res) => {
