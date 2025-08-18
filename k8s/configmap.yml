@@ -16,18 +16,4 @@ data:
   DB_NAME: "musify"
   DB_USERNAME: "admin"
 
-<<<<<<< HEAD
   S3_BUCKET_NAME: musify-platform-bucket-084e8ebc
-=======
-  S3_BUCKET_NAME: musify-platform-bucket-084e8ebc
----
-apiVersion: v1
-kind: Secret
-metadata:
-  name: musify-secrets
-type: Opaque
-stringData:
-  DB_PASSWORD: 0yFdl?og(IPKA1Zp
-  JWT_SECRET: cd1b07fc6ace611d6705e0a69dff172268a37ebaf24d1a072da405f237089e00e5ed91e9b1eca1713ba8fdee4a2df0d0c8f338578de3f04b6c87242040cf13c0
-  COGNITO_CLIENT_SECRET: 1l3gqf9iu4kgbjmbta7k0ghsvs5a5ar2alar9htr5pstf2fgbn8o 
->>>>>>> parent of 4c0d778 (feat: first ci-cd release)
