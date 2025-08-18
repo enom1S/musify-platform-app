@@ -6,7 +6,7 @@ spec:
   parentRefs:
   - name: external-http-gateway
   hostnames:
-  - "34.8.211.74.nip.io"  
+  - "34.160.13.83.nip.io"  
   rules:
   - matches:
     - path:
