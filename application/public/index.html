@@ -486,7 +486,16 @@
             document.getElementById('loadingRecommendations').classList.remove('hidden');
             document.getElementById('recommendationsContainer').innerHTML = '';
 
+            const container = document.getElementById('recommendationsContainer');
+            container.innerHTML = '';
+
+            const oldPlaylist = currentPlaylist;
+            currentPlaylist = [];
+            currentSongIndex = 0;
+            
             try {
+
+                const timestamp = Date.now();
                 const url = `/api/recommendations/${currentUser.id}?limit=12`;
                 console.log('DEBUG: URL chiamata:', url);
                 
@@ -515,41 +524,65 @@
                     })
                 );
                     
-                    displayRecommendations(data.recommendations);
-                    currentPlaylist = data.recommendations;
+                    currentPlaylist = recommendationsWithCovers;
+                    displayRecommendations(recommendationsWithCovers);
                 } else {
                     console.error('DEBUG: Errore nel recupero raccomandazioni:', data.error);
                     alert('Errore nel recupero dei consigli musicali: ' + (data.error || 'Errore sconosciuto'));
+                    container.innerHTML = `
+                        <div class="col-span-full text-center py-8">
+                            <div class="text-red-400 mb-4">
+                                <i class="fas fa-exclamation-triangle text-4xl mb-2"></i>
+                                <p class="text-white text-lg">Errore nel caricamento</p>
+                                <p class="text-gray-300 text-sm">${data.error || 'Errore sconosciuto'}</p>
+                            </div>
+                            <button onclick="getRecommendations()" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg">
+                                <i class="fas fa-redo mr-2"></i>Riprova
+                            </button>
+                        </div>
+                    `;
                 }
             } catch (error) {
                 console.error('DEBUG: Errore fetch raccomandazioni:', error);
                 alert('Errore di rete durante il recupero dei consigli');
+                container.innerHTML = `
+                    <div class="col-span-full text-center py-8">
+                        <div class="text-red-400 mb-4">
+                            <i class="fas fa-wifi text-4xl mb-2"></i>
+                            <p class="text-white text-lg">Errore di connessione</p>
+                            <p class="text-gray-300 text-sm">Impossibile contattare il server</p>
+                        </div>
+                        <button onclick="getRecommendations()" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg">
+                            <i class="fas fa-redo mr-2"></i>Riprova
+                        </button>
+                    </div>
+                `;
             } finally {
                 document.getElementById('loadingRecommendations').classList.add('hidden');
             }
         }
 
         function displayRecommendations(songs) {
-            console.log('🎨 DEBUG: displayRecommendations chiamata con:', songs?.length || 0, 'canzoni');
+            console.log('DEBUG: displayRecommendations chiamata con:', songs?.length || 0, 'canzoni');
             
             const container = document.getElementById('recommendationsContainer');
             if (!container) {
-                console.error('🚨 DEBUG: Container recommendationsContainer non trovato!');
+                console.error('DEBUG: Container recommendationsContainer non trovato!');
                 return;
             }
             
             container.innerHTML = '';
 
             if (!songs || songs.length === 0) {
-                console.log('🎵 DEBUG: Nessuna canzone da mostrare');
+                console.log('DEBUG: Nessuna canzone da mostrare');
                 container.innerHTML = '<div class="col-span-full text-white text-center py-8">Nessuna raccomandazione disponibile al momento. Prova a cambiare mood!</div>';
                 return;
             }
 
-            console.log('🎨 DEBUG: Creando cards per', songs.length, 'canzoni');
+            console.log('DEBUG: Creando cards per', songs.length, 'canzoni');
 
             songs.forEach((song, index) => {
-                console.log(`🎨 DEBUG: Creando card ${index + 1}:`, song.titolo, 'by', song.artista);
+                console.log(`DEBUG: Creando card ${index + 1}:`, song.titolo, 'by', song.artista);
                 const userRating = song.userRating || 0;
                 const popularity = typeof song.popolarita === 'number' ? song.popolarita : parseFloat(song.popolarita) || 0.0;
                 const songCard = document.createElement('div');
@@ -677,12 +710,12 @@
 
             try {
 
-                if (!song.streamUrl) {
+                /*if (!song.streamUrl) {
                     throw new Error('URL stream non disponibile per questa canzone');
                 }
 
                 const streamUrl = song.streamUrl;
-                audioElement.src = streamUrl;
+                audioElement.src = streamUrl;*/
                 
                 const response = await authenticatedFetch(`/api/songs/${song.id}/stream-url`);
                 const data = await response.json();
@@ -719,21 +752,12 @@
                     document.getElementById('playerArtist').textContent = song.artista;
                     
                     const playerCover = document.getElementById('playerCover');
-                    const playerCoverIcon = playerCover.nextElementSibling; // L'icona della musica
+                    const playerCoverIcon = playerCover.nextElementSibling;
                     
                     playerCover.style.display = 'none';
                     playerCover.src = '';
                     
-                    if (song.coverUrl) {
-                        playerCover.src = song.coverUrl;
-                        playerCover.onload = () => {
-                            playerCover.style.display = 'block';
-                            console.log('Copertina caricata da URL pre-esistente');
-                        };
-                        playerCover.onerror = () => {
-                            console.error('Errore caricamento copertina da URL pre-esistente');
-                        };
-                    } else if (song.url_immagine_copertina) {
+                    if (song.url_immagine_copertina) {
                         try {
                             const coverResponse = await authenticatedFetch(`/api/songs/${song.id}/cover-url`);
                             const coverData = await coverResponse.json();
@@ -742,11 +766,15 @@
                                 playerCover.src = coverData.coverUrl;
                                 playerCover.onload = () => {
                                     playerCover.style.display = 'block';
-                                    console.log('Copertina caricata da API');
+                                    console.log('Copertina player caricata');
+                                };
+                                playerCover.onerror = () => {
+                                    playerCover.style.display = 'none';
+                                    console.error('Errore caricamento copertina player');
                                 };
                             }
                         } catch (error) {
-                            console.error('Errore recupero copertina tramite API:', error);
+                            console.error('Errore recupero copertina per player', error);
                         }
                     }
                     
@@ -786,10 +814,20 @@
         }
 
         function cleanupAudioPlayer() {
+            
             if (audioElement) {
-                audioElement.pause();
-                audioElement.removeAttribute('src');
-                audioElement.load();
+                audioElement.removeEventListener('play', updatePlayButton);
+                audioElement.removeEventListener('pause', updatePlayButton);
+                audioElement.removeEventListener('ended', handleAudioEnded);
+                
+                if (!audioElement.paused) {
+                    audioElement.pause();
+                }
+                
+                setTimeout(() => {
+                    audioElement.removeAttribute('src');
+                    audioElement.load();
+                }, 100);
             }
             
             document.getElementById('playerTitle').textContent = 'Seleziona una canzone';
@@ -805,6 +843,7 @@
             }
             
             isPlaying = false;
+            currentSongIndex = 0;
             updatePlayButton();
         }
 
@@ -866,6 +905,17 @@
             if (!currentUser) return;
 
             try {
+                const moodBtn = document.getElementById('changeMoodBtn');
+                const originalText = moodBtn.innerHTML;
+                moodBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Aggiornando...';
+                moodBtn.disabled = true;
+
+                if(audioElement && !audioElement.paused){
+                    audioElement.pause();
+                    isPlaying = false;
+                    updatePlayButton();
+                }
+
                 const response = await authenticatedFetch(`/api/users/${currentUser.id}/mood`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
@@ -873,17 +923,37 @@
                 });
 
                 if (response.ok) {
+                    const oldMood = currentUser.mood_attuale;
                     currentUser.mood_attuale = newMood;
                     document.getElementById('currentMood').textContent = `${getMoodEmoji(newMood)} ${newMood}`;
                     document.getElementById('moodModal').classList.add('hidden');
                     
-                    getRecommendations();
+                    currentPlaylist = [];
+                    currentSongIndex = 0;
+
+                    const container = document.getElementById('recommendationsContainer');
+                    container.innerHTML = '<div class="col-span-full text-center py-8"><div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-white mb-4"></div><p class="text-white">Caricando nuove raccomandazioni per il mood ' + newMood + '...</p></div>';
+
+                    document.getElementById('audioPlayer').classList.add('hidden');
+                    
+                    
+                    await getRecommendations();
+                    showNotification(`Mood cambiato in "${newMood}"! Nuove raccomandazioni caricate.`, 'success');
+
                 } else {
-                    alert('Errore nell\'aggiornamento del mood');
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Errore aggiornamento mood');
                 }
             } catch (error) {
                 console.error('Errore cambio mood:', error);
                 alert('Errore nella modifica del mood');
+                if (currentUser) {
+                    document.getElementById('currentMood').textContent = `${getMoodEmoji(currentUser.mood_attuale)} ${currentUser.mood_attuale}`;
+                }
+            } finally {
+                const moodBtn = document.getElementById('changeMoodBtn');
+                moodBtn.innerHTML = '<i class="fas fa-heart mr-2"></i>Cambia Mood';
+                moodBtn.disabled = false;
             }
         }
 
@@ -1230,23 +1300,34 @@
             });
 
             document.getElementById('logoutBtn').addEventListener('click', function() {
-                cleanupAudioPlayer();
                 
-                /*if (audioElement) {
-                    audioElement.pause();
-                    audioElement.src = '';
-                    audioElement.load(); 
-                }*/
-                
-                isPlaying = false;
-                currentSongIndex = 0;
-                currentPlaylist = [];
-                document.getElementById('audioPlayer').classList.add('hidden');
-                
-                clearAuthTokens(); 
-                currentUser = null;
-                
-                showAuthContainer();
+                try {
+                    if (audioElement && !audioElement.paused) {
+                        audioElement.pause();
+                    }
+                    
+                    document.getElementById('audioPlayer').classList.add('hidden');
+                    
+                    isPlaying = false;
+                    currentSongIndex = 0;
+                    currentPlaylist = [];
+                    
+                    setTimeout(() => {
+                        cleanupAudioPlayer();
+                    }, 200);
+                    
+                    clearAuthTokens();
+                    currentUser = null;
+                    showAuthContainer();
+                    
+                    console.log('✅ Logout completato');
+                    
+                } catch (error) {
+                    console.error('Errore durante logout:', error);
+                    clearAuthTokens();
+                    currentUser = null;
+                    showAuthContainer();
+                }
             });
         });
     </script>

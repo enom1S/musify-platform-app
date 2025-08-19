@@ -1402,17 +1402,17 @@ app.get('/api/recommendations/:userId', authenticateToken, async (req, res) => {
       const genreQuery = `
         SELECT s.id, s.titolo, s.artista, s.genere, s.tag_mood, s.url_s3, s.durata, s.url_immagine_copertina, s.popolarita, s.data_creazione
         FROM canzoni s
-        WHERE s.genere = ?
+        WHERE s.genere = ? AND (s.tag_mood = ? OR s.tag_mood IS NULL)
         ORDER BY s.popolarita DESC
       `;
       
-      console.log(`DEBUG: Query per genere ${genre}:`, genreQuery);
-      console.log(`DEBUG: Parametri:`, [genre]);
+      console.log(`DEBUG: Query per genere ${genre} e mood ${mood}:`, genreQuery);
+      console.log(`DEBUG: Parametri:`, [genre, mood]);
       
-      const [genreResults] = await pool.execute(genreQuery, [genre]);
+      const [genreResults] = await pool.execute(genreQuery, [genre, mood]);
       allRecommendations = allRecommendations.concat(genreResults);
       
-      console.log(`DEBUG: Trovate ${genreResults.length} canzoni per genere ${genre}`);
+      console.log(`DEBUG: Trovate ${genreResults.length} canzoni per genere ${genre} e mood ${mood}`);
     }
     
     const uniqueRecommendations = allRecommendations.filter((song, index, self) => 
@@ -1459,7 +1459,6 @@ app.get('/api/recommendations/:userId', authenticateToken, async (req, res) => {
           console.log(`DEBUG: Generando stream URL per canzone ${song.id}, S3 Key: ${audioS3Key}`);
           
           if (audioS3Key) {
-            // Verifica prima se il file esiste
             try {
               await s3.headObject({
                 Bucket: process.env.S3_BUCKET_NAME,
@@ -1537,7 +1536,6 @@ app.get('/api/recommendations/:userId', authenticateToken, async (req, res) => {
     
     console.log('DEBUG: Raccomandazioni con URL generate:', recommendationsWithUrls.length);
     
-    // Filtra solo le canzoni che hanno un streamUrl valido
     const validRecommendations = recommendationsWithUrls.filter(song => song.streamUrl);
     console.log(`DEBUG: Canzoni con stream URL valido: ${validRecommendations.length}/${recommendationsWithUrls.length}`);
     
