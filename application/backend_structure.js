@@ -1400,7 +1400,7 @@ app.get('/api/recommendations/:userId', authenticateToken, async (req, res) => {
     
     for (const genre of genres) {
       const genreQuery = `
-        SELECT s.id, s.titolo, s.artista, s.genere, s.tag_mood, s.url_s3, s.durata, s.url_immagine_copertina, s.popolarita, s.data_creazione
+        SELECT s.id, s.titolo, s.artista, s.genere, s.tag_mood, s.url_s3, s.durata, s.url_immagine_copertina, s.popolarita, s.data_creazione,
               CASE 
                 WHEN LOWER(s.tag_mood) = LOWER(?) THEN 3
                 WHEN s.tag_mood LIKE CONCAT('%"', ?, '"%') THEN 2
