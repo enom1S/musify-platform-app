@@ -1438,7 +1438,7 @@ app.get('/api/recommendations/:userId', authenticateToken, async (req, res) => {
       .sort(() => Math.random() - 0.5)
       .slice(0, limit);
 
-    const recommendationsWithUrls = await Promise.all(
+    /*const recommendationsWithUrls = await Promise.all(
       shuffledRecommendations.map(async (song) => {
         console.log(`\n=== DEBUG CANZONE ${song.id}: ${song.titolo} ===`);
         console.log(`url_s3 raw dal DB: "${song.url_s3}"`);
@@ -1495,7 +1495,7 @@ app.get('/api/recommendations/:userId', authenticateToken, async (req, res) => {
         
         return song;
       })
-    );
+    );*/
     
     console.log('DEBUG: Raccomandazioni con URL generate:', recommendationsWithUrls.length);
     
