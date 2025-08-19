@@ -1497,7 +1497,7 @@ app.get('/api/recommendations/:userId', authenticateToken, async (req, res) => {
       })
     );*/
     
-    console.log('DEBUG: Raccomandazioni con URL generate:', recommendationsWithUrls.length);
+    //console.log('DEBUG: Raccomandazioni con URL generate:', recommendationsWithUrls.length);
     
     
     if (typeof saveToHistory === 'function' && shuffledRecommendations.length > 0) {
