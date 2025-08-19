@@ -1402,17 +1402,17 @@ app.get('/api/recommendations/:userId', authenticateToken, async (req, res) => {
       const genreQuery = `
         SELECT s.id, s.titolo, s.artista, s.genere, s.tag_mood, s.url_s3, s.durata, s.url_immagine_copertina, s.popolarita, s.data_creazione
         FROM canzoni s
-        WHERE s.genere = ? AND (s.tag_mood = ? OR s.tag_mood IS NULL)
+        WHERE s.genere = ?
         ORDER BY s.popolarita DESC
       `;
       
-      console.log(`DEBUG: Query per genere ${genre} e mood ${mood}:`, genreQuery);
-      console.log(`DEBUG: Parametri:`, [genre, mood]);
+      console.log(`DEBUG: Query per genere ${genre}:`, genreQuery);
+      console.log(`DEBUG: Parametri:`, [genre]);
       
-      const [genreResults] = await pool.execute(genreQuery, [genre, mood]);
+      const [genreResults] = await pool.execute(genreQuery, [genre]);
       allRecommendations = allRecommendations.concat(genreResults);
       
-      console.log(`DEBUG: Trovate ${genreResults.length} canzoni per genere ${genre} e mood ${mood}`);
+      console.log(`DEBUG: Trovate ${genreResults.length} canzoni per genere ${genre}`);
     }
     
     const uniqueRecommendations = allRecommendations.filter((song, index, self) => 

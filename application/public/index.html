@@ -486,16 +486,7 @@
             document.getElementById('loadingRecommendations').classList.remove('hidden');
             document.getElementById('recommendationsContainer').innerHTML = '';
 
-            const container = document.getElementById('recommendationsContainer');
-            container.innerHTML = '';
-
-            const oldPlaylist = currentPlaylist;
-            currentPlaylist = [];
-            currentSongIndex = 0;
-            
             try {
-
-                const timestamp = Date.now();
                 const url = `/api/recommendations/${currentUser.id}?limit=12`;
                 console.log('DEBUG: URL chiamata:', url);
                 
@@ -524,39 +515,15 @@
                     })
                 );
                     
-                    currentPlaylist = recommendationsWithCovers;
-                    displayRecommendations(recommendationsWithCovers);
+                    displayRecommendations(data.recommendations);
+                    currentPlaylist = data.recommendations;
                 } else {
                     console.error('DEBUG: Errore nel recupero raccomandazioni:', data.error);
                     alert('Errore nel recupero dei consigli musicali: ' + (data.error || 'Errore sconosciuto'));
-                    container.innerHTML = `
-                        <div class="col-span-full text-center py-8">
-                            <div class="text-red-400 mb-4">
-                                <i class="fas fa-exclamation-triangle text-4xl mb-2"></i>
-                                <p class="text-white text-lg">Errore nel caricamento</p>
-                                <p class="text-gray-300 text-sm">${data.error || 'Errore sconosciuto'}</p>
-                            </div>
-                            <button onclick="getRecommendations()" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg">
-                                <i class="fas fa-redo mr-2"></i>Riprova
-                            </button>
-                        </div>
-                    `;
                 }
             } catch (error) {
                 console.error('DEBUG: Errore fetch raccomandazioni:', error);
                 alert('Errore di rete durante il recupero dei consigli');
-                container.innerHTML = `
-                    <div class="col-span-full text-center py-8">
-                        <div class="text-red-400 mb-4">
-                            <i class="fas fa-wifi text-4xl mb-2"></i>
-                            <p class="text-white text-lg">Errore di connessione</p>
-                            <p class="text-gray-300 text-sm">Impossibile contattare il server</p>
-                        </div>
-                        <button onclick="getRecommendations()" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg">
-                            <i class="fas fa-redo mr-2"></i>Riprova
-                        </button>
-                    </div>
-                `;
             } finally {
                 document.getElementById('loadingRecommendations').classList.add('hidden');
             }
@@ -905,17 +872,6 @@
             if (!currentUser) return;
 
             try {
-                const moodBtn = document.getElementById('changeMoodBtn');
-                const originalText = moodBtn.innerHTML;
-                moodBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Aggiornando...';
-                moodBtn.disabled = true;
-
-                if(audioElement && !audioElement.paused){
-                    audioElement.pause();
-                    isPlaying = false;
-                    updatePlayButton();
-                }
-
                 const response = await authenticatedFetch(`/api/users/${currentUser.id}/mood`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
@@ -923,37 +879,17 @@
                 });
 
                 if (response.ok) {
-                    const oldMood = currentUser.mood_attuale;
                     currentUser.mood_attuale = newMood;
                     document.getElementById('currentMood').textContent = `${getMoodEmoji(newMood)} ${newMood}`;
                     document.getElementById('moodModal').classList.add('hidden');
                     
-                    currentPlaylist = [];
-                    currentSongIndex = 0;
-
-                    const container = document.getElementById('recommendationsContainer');
-                    container.innerHTML = '<div class="col-span-full text-center py-8"><div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-white mb-4"></div><p class="text-white">Caricando nuove raccomandazioni per il mood ' + newMood + '...</p></div>';
-
-                    document.getElementById('audioPlayer').classList.add('hidden');
-                    
-                    
-                    await getRecommendations();
-                    showNotification(`Mood cambiato in "${newMood}"! Nuove raccomandazioni caricate.`, 'success');
-
+                    getRecommendations();
                 } else {
-                    const errorData = await response.json();
-                    throw new Error(errorData.error || 'Errore aggiornamento mood');
+                    alert('Errore nell\'aggiornamento del mood');
                 }
             } catch (error) {
                 console.error('Errore cambio mood:', error);
                 alert('Errore nella modifica del mood');
-                if (currentUser) {
-                    document.getElementById('currentMood').textContent = `${getMoodEmoji(currentUser.mood_attuale)} ${currentUser.mood_attuale}`;
-                }
-            } finally {
-                const moodBtn = document.getElementById('changeMoodBtn');
-                moodBtn.innerHTML = '<i class="fas fa-heart mr-2"></i>Cambia Mood';
-                moodBtn.disabled = false;
             }
         }
 
