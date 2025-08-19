@@ -1407,7 +1407,7 @@ app.get('/api/recommendations/:userId', authenticateToken, async (req, res) => {
       `;
       
       console.log(`DEBUG: Query per genere ${genre}:`, genreQuery);
-      console.log(`DEBUG: Parametri:`, [genre, mood]);
+      console.log(`DEBUG: Parametri:`, [genre]);
       
       const [genreResults] = await pool.execute(genreQuery, [genre]);
       allRecommendations = allRecommendations.concat(genreResults);
@@ -1438,14 +1438,17 @@ app.get('/api/recommendations/:userId', authenticateToken, async (req, res) => {
       .sort(() => Math.random() - 0.5)
       .slice(0, limit);
 
-    /*const recommendationsWithUrls = await Promise.all(
+    // GENERA URL PRESEGNATI PER OGNI CANZONE
+    const recommendationsWithUrls = await Promise.all(
       shuffledRecommendations.map(async (song) => {
         console.log(`\n=== DEBUG CANZONE ${song.id}: ${song.titolo} ===`);
         console.log(`url_s3 raw dal DB: "${song.url_s3}"`);
         console.log(`url_immagine_copertina raw dal DB: "${song.url_immagine_copertina}"`);
         console.log(`S3_BUCKET_NAME: "${process.env.S3_BUCKET_NAME}"`);
         console.log(`AWS_REGION: "${process.env.AWS_REGION}"`);
+        
         try {
+          // GESTIONE URL AUDIO
           let audioS3Key;
           if (song.url_s3 && song.url_s3.includes('.amazonaws.com/')) {
             audioS3Key = song.url_s3.split('.amazonaws.com/')[1];
@@ -1456,18 +1459,37 @@ app.get('/api/recommendations/:userId', authenticateToken, async (req, res) => {
           console.log(`DEBUG: Generando stream URL per canzone ${song.id}, S3 Key: ${audioS3Key}`);
           
           if (audioS3Key) {
-            const audioParams = {
-              Bucket: process.env.S3_BUCKET_NAME,
-              Key: audioS3Key,
-              Expires: 3600, // 1 ora
-              ResponseContentType: 'audio/mpeg',
-              ResponseContentDisposition: `inline; filename="${song.titolo} - ${song.artista}.mp3"`
-            };
-            
-            song.streamUrl = s3.getSignedUrl('getObject', audioParams);
-            console.log(`DEBUG: Stream URL generato per ${song.titolo}: ${song.streamUrl.substring(0, 100)}...`);
+            // Verifica prima se il file esiste
+            try {
+              await s3.headObject({
+                Bucket: process.env.S3_BUCKET_NAME,
+                Key: audioS3Key
+              }).promise();
+              
+              console.log(`✅ File audio TROVATO su S3: ${audioS3Key}`);
+              
+              const audioParams = {
+                Bucket: process.env.S3_BUCKET_NAME,
+                Key: audioS3Key,
+                Expires: 3600, // 1 ora
+                ResponseContentType: 'audio/mpeg',
+                ResponseContentDisposition: `inline; filename="${song.titolo} - ${song.artista}.mp3"`
+              };
+              
+              song.streamUrl = s3.getSignedUrl('getObject', audioParams);
+              console.log(`DEBUG: Stream URL generato per ${song.titolo}: ${song.streamUrl.substring(0, 100)}...`);
+              
+            } catch (headError) {
+              console.error(`❌ File audio NON TROVATO su S3: ${audioS3Key}`, headError.code);
+              song.streamUrl = null;
+              song.fileNotFound = true;
+            }
+          } else {
+            console.error(`❌ Nessuna chiave S3 valida per canzone ${song.id}`);
+            song.streamUrl = null;
           }
           
+          // GESTIONE URL COPERTINA
           if (song.url_immagine_copertina) {
             let coverS3Key;
             if (song.url_immagine_copertina.includes('.amazonaws.com/')) {
@@ -1478,30 +1500,64 @@ app.get('/api/recommendations/:userId', authenticateToken, async (req, res) => {
             
             console.log(`DEBUG: Generando cover URL per canzone ${song.id}, S3 Key: ${coverS3Key}`);
             
-            const coverParams = {
-              Bucket: process.env.S3_BUCKET_NAME,
-              Key: coverS3Key,
-              Expires: 3600,
-              ResponseContentDisposition: `inline; filename="${song.titolo}-cover.jpg"`
-            };
-            
-            song.coverUrl = s3.getSignedUrl('getObject', coverParams);
-            console.log(`DEBUG: Cover URL generato per ${song.titolo}: ${song.coverUrl.substring(0, 100)}...`);
+            try {
+              await s3.headObject({
+                Bucket: process.env.S3_BUCKET_NAME,
+                Key: coverS3Key
+              }).promise();
+              
+              console.log(`✅ File copertina TROVATO su S3: ${coverS3Key}`);
+              
+              const coverParams = {
+                Bucket: process.env.S3_BUCKET_NAME,
+                Key: coverS3Key,
+                Expires: 3600,
+                ResponseContentDisposition: `inline; filename="${song.titolo}-cover.jpg"`
+              };
+              
+              song.coverUrl = s3.getSignedUrl('getObject', coverParams);
+              console.log(`DEBUG: Cover URL generato per ${song.titolo}: ${song.coverUrl.substring(0, 100)}...`);
+              
+            } catch (headError) {
+              console.error(`❌ File copertina NON TROVATO su S3: ${coverS3Key}`, headError.code);
+              song.coverUrl = null;
+            }
           }
           
         } catch (error) {
           console.error(`Errore generazione URL per canzone ${song.id}:`, error);
+          song.streamUrl = null;
+          song.coverUrl = null;
+          song.error = error.message;
         }
         
         return song;
       })
-    );*/
+    );
     
-    //console.log('DEBUG: Raccomandazioni con URL generate:', recommendationsWithUrls.length);
+    console.log('DEBUG: Raccomandazioni con URL generate:', recommendationsWithUrls.length);
     
+    // Filtra solo le canzoni che hanno un streamUrl valido
+    const validRecommendations = recommendationsWithUrls.filter(song => song.streamUrl);
+    console.log(`DEBUG: Canzoni con stream URL valido: ${validRecommendations.length}/${recommendationsWithUrls.length}`);
     
-    if (typeof saveToHistory === 'function' && shuffledRecommendations.length > 0) {
-        await saveToHistory(parseInt(userId), shuffledRecommendations, mood);
+    if (validRecommendations.length === 0) {
+      return res.status(404).json({ 
+        error: 'Nessuna canzone disponibile per lo streaming',
+        debug: {
+          totalFound: recommendationsWithUrls.length,
+          validStreams: validRecommendations.length,
+          brokenSongs: recommendationsWithUrls.filter(s => s.fileNotFound).map(s => ({
+            id: s.id,
+            title: s.titolo,
+            s3Key: s.url_s3
+          }))
+        }
+      });
+    }
+    
+    if (typeof saveToHistory === 'function' && validRecommendations.length > 0) {
+        await saveToHistory(parseInt(userId), validRecommendations, mood);
     }
     
     const statsQuery = `
@@ -1515,7 +1571,7 @@ app.get('/api/recommendations/:userId', authenticateToken, async (req, res) => {
     
     const [statsRows] = await pool.execute(statsQuery, [userId]);
 
-    for (const song of shuffledRecommendations) {
+    for (const song of validRecommendations) {
       const [ratingRows] = await pool.execute(
         'SELECT voto_feedback FROM feedback_utente WHERE id_utente = ? AND id_canzone = ?',
         [parseInt(userId), song.id]
@@ -1526,12 +1582,17 @@ app.get('/api/recommendations/:userId', authenticateToken, async (req, res) => {
     }
     
     res.json({
-      recommendations: shuffledRecommendations,
+      recommendations: validRecommendations,
       basedOn: {
         genres: genres,
         mood: mood
       },
-      userStats: statsRows[0]
+      userStats: statsRows[0],
+      debug: {
+        totalProcessed: recommendationsWithUrls.length,
+        validStreams: validRecommendations.length,
+        brokenFiles: recommendationsWithUrls.length - validRecommendations.length
+      }
     });
     
   } catch (error) {
