@@ -1402,14 +1402,18 @@ app.get('/api/recommendations/:userId', authenticateToken, async (req, res) => {
       const genreQuery = `
         SELECT s.id, s.titolo, s.artista, s.genere, s.tag_mood, s.url_s3, s.durata, s.url_immagine_copertina, s.popolarita, s.data_creazione
         FROM canzoni s
-        WHERE s.genere = ?
+        WHERE s.genere = ? AND s.tag_mood = ?
         ORDER BY s.popolarita DESC
       `;
       
       console.log(`DEBUG: Query per genere ${genre}:`, genreQuery);
       console.log(`DEBUG: Parametri:`, [genre]);
       
-      const [genreResults] = await pool.execute(genreQuery, [genre]);
+      const [genreResults] = await pool.execute(genreQuery, [genre, mood]);
+      genreResults.forEach(song => {
+        console.log(`  ✅ "${song.titolo}" - mood: "${song.tag_mood}"`);
+      });
+      
       allRecommendations = allRecommendations.concat(genreResults);
       
       console.log(`DEBUG: Trovate ${genreResults.length} canzoni per genere ${genre}`);

@@ -531,6 +531,7 @@
 
         function displayRecommendations(songs) {
             console.log('DEBUG: displayRecommendations chiamata con:', songs?.length || 0, 'canzoni');
+            console.log('DEBUG: Mood utente corrente:', currentUser?.mood_attuale);
             
             const container = document.getElementById('recommendationsContainer');
             if (!container) {
@@ -550,6 +551,19 @@
 
             songs.forEach((song, index) => {
                 console.log(`DEBUG: Creando card ${index + 1}:`, song.titolo, 'by', song.artista);
+                console.log(`DEBUG: Mood canzone: "${song.tag_mood}" vs Mood utente: "${currentUser?.mood_attuale}"`);
+                
+                const currentMood = currentUser?.mood_attuale;
+                let moodMatch = 'unknown';
+                let moodIndicator = '';
+
+                if (!song.tag_mood || song.tag_mood === '') {
+                    moodMatch = 'neutral';
+                } else if (song.tag_mood === currentMood) {
+                    moodMatch = 'exact';
+                    moodIndicator = '<div class="absolute top-2 left-2 bg-green-500 text-white text-xs px-2 py-1 rounded z-10"><i class="fas fa-check mr-1"></i>Mood perfetto</div>';
+                }
+                
                 const userRating = song.userRating || 0;
                 const popularity = typeof song.popolarita === 'number' ? song.popolarita : parseFloat(song.popolarita) || 0.0;
                 const songCard = document.createElement('div');
