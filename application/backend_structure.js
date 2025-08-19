@@ -1400,27 +1400,53 @@ app.get('/api/recommendations/:userId', authenticateToken, async (req, res) => {
     
     for (const genre of genres) {
       const genreQuery = `
-        SELECT s.id, s.titolo, s.artista, s.genere, s.tag_mood, s.url_s3, s.durata, s.url_immagine_copertina, s.popolarita, s.data_creazione,
-              CASE 
-                WHEN LOWER(s.tag_mood) = LOWER(?) THEN 3
-                WHEN s.tag_mood LIKE CONCAT('%"', ?, '"%') THEN 2
-                WHEN LOWER(s.tag_mood) LIKE CONCAT('%', LOWER(?), '%') THEN 1
-                ELSE 0 
-              END AS mood_match_score
+        SELECT s.id, s.titolo, s.artista, s.genere, s.tag_mood, s.url_s3, s.durata, s.url_immagine_copertina, s.popolarita, s.data_creazione
         FROM canzoni s
-        WHERE s.genere = ? 
-        ORDER BY mood_match_score DESC, s.popolarita DESC
+        WHERE s.genere = ?
+        ORDER BY s.popolarita DESC
       `;
       
-      console.log(`DEBUG: Query per genere ${genre} e mood ${mood}:`);
-      console.log('DEBUG: Parametri:', [mood, mood, mood, genre])
+      console.log(`DEBUG: Query per genere ${genre}:`);
+      console.log('DEBUG: Parametri:', [genre])
       
-      const [genreResults] = await pool.execute(genreQuery, [mood, mood, mood, genre]);
-      genreResults.forEach(song => {
-        console.log(`  ✅ "${song.titolo}" - mood: "${song.tag_mood}"`);
-      });
+      const [genreResults] = await pool.execute(genreQuery, [genre]);
 
-      allRecommendations = allRecommendations.concat(genreResults);
+      const moodFilteredResults = [];
+      const otherMoodResults = [];
+      
+      for (const song of genreResults) {
+        let dbMood = song.tag_mood || '';
+        let moodScore = 0;
+        
+        if (dbMood.startsWith('[') && dbMood.endsWith(']')) {
+          try {
+            const parsed = JSON.parse(dbMood);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              dbMood = parsed[0];
+            }
+          } catch (e) {
+            console.log(`Warning: Impossibile parsare mood JSON per canzone ${song.id}: ${song.tag_mood}`);
+          }
+        }
+
+      const normalizedDbMood = dbMood.toLowerCase().trim();
+      const normalizedUserMood = mood.toLowerCase().trim();
+      
+      if (normalizedDbMood === normalizedUserMood) {
+        moodScore = 3; 
+        song.moodScore = moodScore;
+        song.cleanMood = dbMood;
+        moodFilteredResults.push(song);
+        console.log(`PERFECT MATCH: "${song.titolo}" - DB: "${song.tag_mood}" -> Clean: "${dbMood}"`);
+      } else {
+        song.moodScore = 0;
+        song.cleanMood = dbMood;
+        otherMoodResults.push(song);
+        console.log(`MOOD MISMATCH: "${song.titolo}" - DB: "${song.tag_mood}" -> Clean: "${dbMood}" (wanted: ${mood})`);
+      }
+    }
+  
+      allRecommendations = allRecommendations.concat(moodFilteredResults);
       
       console.log(`DEBUG: Trovate ${genreResults.length} canzoni per genere ${genre}`);
     }
