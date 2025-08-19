@@ -1401,19 +1401,25 @@ app.get('/api/recommendations/:userId', authenticateToken, async (req, res) => {
     for (const genre of genres) {
       const genreQuery = `
         SELECT s.id, s.titolo, s.artista, s.genere, s.tag_mood, s.url_s3, s.durata, s.url_immagine_copertina, s.popolarita, s.data_creazione
+              CASE 
+                WHEN LOWER(s.tag_mood) = LOWER(?) THEN 3
+                WHEN s.tag_mood LIKE CONCAT('%"', ?, '"%') THEN 2
+                WHEN LOWER(s.tag_mood) LIKE CONCAT('%', LOWER(?), '%') THEN 1
+                ELSE 0 
+              END AS mood_match_score
         FROM canzoni s
-        WHERE s.genere = ? AND s.tag_mood = ?
-        ORDER BY s.popolarita DESC
+        WHERE s.genere = ? 
+        ORDER BY mood_match_score DESC, s.popolarita DESC
       `;
       
-      console.log(`DEBUG: Query per genere ${genre}:`, genreQuery);
-      console.log(`DEBUG: Parametri:`, [genre]);
+      console.log(`DEBUG: Query per genere ${genre} e mood ${mood}:`);
+      console.log('DEBUG: Parametri:', [mood, mood, mood, genre])
       
-      const [genreResults] = await pool.execute(genreQuery, [genre, mood]);
+      const [genreResults] = await pool.execute(genreQuery, [mood, mood, mood, genre]);
       genreResults.forEach(song => {
         console.log(`  ✅ "${song.titolo}" - mood: "${song.tag_mood}"`);
       });
-      
+
       allRecommendations = allRecommendations.concat(genreResults);
       
       console.log(`DEBUG: Trovate ${genreResults.length} canzoni per genere ${genre}`);
