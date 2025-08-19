@@ -1707,6 +1707,113 @@ app.get('/api/users/:userId/history/stats', authenticateToken, async (req, res) 
     }
 });
 
+// Aggiungi questo endpoint nel backend
+app.delete('/api/songs/:songId', authenticateToken, async (req, res) => {
+  const connection = await pool.getConnection();
+  await connection.beginTransaction();
+  
+  try {
+    const { songId } = req.params;
+    
+    const [songRows] = await connection.execute(
+      'SELECT id, titolo, artista, url_s3, url_immagine_copertina FROM canzoni WHERE id = ?',
+      [songId]
+    );
+    
+    if (songRows.length === 0) {
+      await connection.rollback();
+      connection.release();
+      return res.status(404).json({ error: 'Canzone non trovata' });
+    }
+    
+    const song = songRows[0];
+    console.log(`Eliminando canzone: ${song.titolo} - ${song.artista}`);
+    
+    const filesToDelete = [];
+    
+    if (song.url_s3) {
+      let audioS3Key;
+      if (song.url_s3.includes('.amazonaws.com/')) {
+        audioS3Key = song.url_s3.split('.amazonaws.com/')[1];
+      } else {
+        audioS3Key = song.url_s3.startsWith('/') ? song.url_s3.substring(1) : song.url_s3;
+      }
+      filesToDelete.push({ Key: audioS3Key });
+      console.log(`File audio da eliminare: ${audioS3Key}`);
+    }
+    
+    if (song.url_immagine_copertina) {
+      let coverS3Key;
+      if (song.url_immagine_copertina.includes('.amazonaws.com/')) {
+        coverS3Key = song.url_immagine_copertina.split('.amazonaws.com/')[1];
+      } else {
+        coverS3Key = song.url_immagine_copertina.startsWith('/') ? song.url_immagine_copertina.substring(1) : song.url_immagine_copertina;
+      }
+      filesToDelete.push({ Key: coverS3Key });
+      console.log(`File copertina da eliminare: ${coverS3Key}`);
+    }
+    
+    if (filesToDelete.length > 0) {
+      const deleteParams = {
+        Bucket: process.env.S3_BUCKET_NAME,
+        Delete: {
+          Objects: filesToDelete,
+          Quiet: false
+        }
+      };
+      
+      const deleteResult = await s3.deleteObjects(deleteParams).promise();
+      console.log('File S3 eliminati:', deleteResult.Deleted);
+      
+      if (deleteResult.Errors && deleteResult.Errors.length > 0) {
+        console.error('Errori eliminazione S3:', deleteResult.Errors);
+      }
+    }
+    
+    await connection.execute(
+      'DELETE FROM feedback_utente WHERE id_canzone = ?',
+      [songId]
+    );
+    
+    await connection.execute(
+      'DELETE FROM storico_canzoni WHERE id_canzone = ?',
+      [songId]
+    );
+    
+    const [deleteResult] = await connection.execute(
+      'DELETE FROM canzoni WHERE id = ?',
+      [songId]
+    );
+    
+    if (deleteResult.affectedRows === 0) {
+      await connection.rollback();
+      connection.release();
+      return res.status(404).json({ error: 'Canzone non trovata per eliminazione' });
+    }
+    
+    await connection.commit();
+    connection.release();
+    
+    res.json({
+      message: 'Canzone eliminata completamente',
+      songId: songId,
+      title: song.titolo,
+      artist: song.artista,
+      filesDeleted: filesToDelete.length
+    });
+    
+  } catch (error) {
+    await connection.rollback();
+    connection.release();
+    
+    console.error('Errore eliminazione canzone:', error);
+    res.status(500).json({ 
+      error: 'Errore interno del server durante eliminazione',
+      details: error.message 
+    });
+  }
+});
+
 app.use(cors({
   origin: ['http://0.0.0.0:3000', 'http://0.0.0.0:8080', 'http://0.0.0.0:5500'],
   credentials: true
